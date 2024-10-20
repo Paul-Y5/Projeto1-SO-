@@ -16,19 +16,63 @@
 
 # $1 é a diretoria origem e $2 a diretoria destino (backup)
 
-if [[ $# < 2 || $# == 3 && $3 != "-c" ]]; then #Condição de intervalo de quantidade de argumentos [2 a 3]
-    echo "Erro nos argumentos!"
-else
-    echo "resulta $@"
-    if [[ -d $1 && -d $2 ]]; then
-        if [[ $# == 3 ]]; then
-            echo "print comandos que seriam executados"
-        else
-            for file in $1; do
+# Estrutura : /backup.sh [-c] dir_trabalho dir_backup
 
-            done
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then #Condição de intervalo de quantidade de argumentos [2 a 3]
+    echo "[Erro] --> Número de argumentos inválido!"
+    exit 1 #saída com erro
+fi
+
+if [[ $# -eq 3 && $1 -ne "-c" ]]; then #Condição de uso do -c
+    echo "[Erro] --> Argumento 3 ($1) impossível | Argumentos possíveis: -c"
+    exit 1
+fi
+
+#Utilização de variáveis para as diretorias para verificar se foi passado o argumento -c para ativar Check mode
+if [[ $# -eq 2 ]]; then
+    Check_mode=0
+    Source_DIR=$1
+    Backup_DIR=$2
+else
+    Check_mode=1
+    Source_DIR=$2
+    Backup_DIR=$3
+fi
+
+#Verifica a existência da diretoria de origem
+if [[ ! -d $SOURCE_DIR ]]; then
+    echo "[Erro] --> A diretoria de origem não existe!"
+    exit 1
+fi
+
+#Verifica a existência da diretoria de origem
+if [[ ! -d $BACKUP_DIR ]]; then
+    echo "mkdir $BACKUP_DIR"
+    mkdir -p "$BACKUP_DIR"
+fi
+
+#Executar em check mode ou não
+if [[ $Check_mode -eq 1 ]]; then #Exucução do progrma de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
+    #Iterar sobre os ficheiros para fazer o backup a partir do cp (comando copy)
+    for file in "$Source_DIR"/*; do ### Parei aqui de dar debbug
+        if [[ -e "$Backup_DIR/$file" ]]; then
+            echo "Ficheiro já existe!"
+            if [[ $file -nt "$Backup_DIR/$file" ]]; then
+                echo "rm $Backup_DIR/$file"
+                echo "cp $file $Backup_DIR"
+            else ### Parei aqui de dar debbug
+                echo "Ficheiro com destino em backup mais recente, não substituir"
+                #--> Implementar input para dizer se pretende substituir ou não
+            fi
+        else
+            echo "cp $file $Backup_DIR"
         fi
-    else
-        echo "Resulta não são dir"
-    fi
+    done
+    exit 0 #saída com sucesso
+else  #Se -c não for argumento executa comandos (modo check=0)
+    for file in $1; do
+        echo "aqui executa"
+    done
+    exit 0
 fi
