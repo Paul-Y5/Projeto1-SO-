@@ -18,6 +18,13 @@
 
 # Estrutura : /backup.sh [-c] dir_trabalho dir_backup
 
+counter_erro=0 #Nenhum aumento...
+counter_warnings=0
+counter_copied=0
+counter_deleted=0
+counter_updated=0
+bytes_deleted=0
+bytes_copied=0
 
 if [[ $# -lt 2 || $# -gt 3 ]]; then #Condição de intervalo de quantidade de argumentos [2 a 3]
     echo "[Erro] --> Número de argumentos inválido!"
@@ -51,30 +58,69 @@ fi
 #Verifica a existência da diretoria de origem
 if [[ ! -d $Backup_DIR ]]; then
     echo "mkdir $Backup_DIR"
-    #mkdir -p "$Backup_DIR"
 fi
 
 #Executar em check mode ou não
 if [[ $Check_mode -eq 1 ]]; then #Exucução do progrma de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
     #Iterar sobre os ficheiros para fazer o backup a partir do cp (comando copy)
-    for file in "$Source_DIR"/*; do
+    for file in "$Source_DIR"/{*,.*}; do
         if [[ -e "$Backup_DIR/$file" ]]; then
-            echo "Ficheiro já existe!"
             if [[ $file -nt "$Backup_DIR/$file" ]]; then
+                echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
+                counter_warnings=$((counter_warnings + 1))
                 echo "rm $Backup_DIR/$file"
+                bytes_deleted=$((bytes_deleted + $(wc -c < $Backup_DIR/$file)))
+                counter_deleted=$((counter_deleted + 1))
                 echo "cp $file $Backup_DIR"
+                bytes_copied=$((bytes_copied + $(wc -c < $file)))
+                counter_copied=$((counter_copied + 1))
+
+                counter_updated=$((counter_updated + 1))
             else ### Parei aqui de dar debbug
-                echo "Ficheiro com destino em backup mais recente, não substituir"
-                #--> Implementar input para dizer se pretende substituir ou não
+                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                counter_warnings=$((counter_warnings + 1))
+                bytes_copied=$((bytes_copied + $(wc -c < $file)))
             fi
         else
             echo "cp $file $Backup_DIR"
+            counter_copied=$((counter_copied + 1))
+            bytes_copied=$((bytes_copied + $(wc -c < $file)))
         fi
     done
+    echo "While backuping src: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted deleted ($bytes_deleted B)"
     exit 0 #saída com sucesso
 else  #Se -c não for argumento executa comandos (modo check=0)
-    for file in $1; do
-        echo "aqui executa"
+    if [[ ! -d $Backup_DIR ]]; then
+        mkdir -p "$Backup_DIR"  #-p garante que são criados as diretorias pai caso não existam
+    fi
+    for file in "$Source_DIR"/{*,.*}; do
+        if [[ -e "$Backup_DIR/$file" ]]; then
+            if [[ $file -nt "$Backup_DIR/$file" ]]; then
+                echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
+                counter_warnings=$((counter_warnings + 1))
+                rm $Backup_DIR/$file
+
+                bytes_deleted=$((bytes_deleted + $(wc -c < $Backup_DIR/$file)))
+                counter_deleted=$((counter_deleted + 1))
+
+                cp $file $Backup_DIR
+
+                bytes_copied=$((bytes_copied + $(wc -c < $file)))
+                counter_copied=$((counter_copied + 1))
+
+                counter_updated=$((counter_updated + 1))
+            else ### Parei aqui de dar debbug
+                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                counter_warnings=$((counter_warnings + 1))
+                bytes_copied=$((bytes_copied + $(wc -c < $file)))
+            fi
+        else
+            cp "$file" "$Backup_DIR"
+            counter_copied=$((counter_copied + 1))
+            bytes_copied=$((bytes_copied + $(wc -c < $file)))
+            echo "[Ficheiro $file copiado para backup]"
+        fi
     done
+    echo "While backuping src: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted deleted ($bytes_deleted B)"
     exit 0
 fi
