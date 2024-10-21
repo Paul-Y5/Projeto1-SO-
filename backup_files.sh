@@ -40,22 +40,24 @@ else
     Backup_DIR=$3
 fi
 
+echo $Source_DIR
+
 #Verifica a existência da diretoria de origem
-if [[ ! -d $SOURCE_DIR ]]; then
+if [[ ! -d $Source_DIR ]]; then
     echo "[Erro] --> A diretoria de origem não existe!"
     exit 1
 fi
 
 #Verifica a existência da diretoria de origem
-if [[ ! -d $BACKUP_DIR ]]; then
-    echo "mkdir $BACKUP_DIR"
-    mkdir -p "$BACKUP_DIR"
+if [[ ! -d $Backup_DIR ]]; then
+    echo "mkdir $Backup_DIR"
+    #mkdir -p "$Backup_DIR"
 fi
 
 #Executar em check mode ou não
 if [[ $Check_mode -eq 1 ]]; then #Exucução do progrma de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
     #Iterar sobre os ficheiros para fazer o backup a partir do cp (comando copy)
-    for file in "$Source_DIR"/*; do ### Parei aqui de dar debbug
+    for file in "$Source_DIR"/*; do
         if [[ -e "$Backup_DIR/$file" ]]; then
             echo "Ficheiro já existe!"
             if [[ $file -nt "$Backup_DIR/$file" ]]; then
