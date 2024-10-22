@@ -18,6 +18,7 @@
 
 # Estrutura : /backup.sh [-c] dir_trabalho dir_backup
 
+#Variáveis de contagem
 counter_erro=0 #Nenhum aumento...
 counter_warnings=0
 counter_copied=0
@@ -46,8 +47,6 @@ else
     Source_DIR=$2
     Backup_DIR=$3
 fi
-
-echo $Source_DIR
 
 #Verifica a existência da diretoria de origem
 if [[ ! -d $Source_DIR ]]; then

@@ -7,4 +7,4 @@
 # Exemplo:
 # While backuping src: 0 Errors; 1 Warnings; 1 Updated; 2 Copied (200B); 0 deleted (0B)
 
-#IMplementar função em todos os outros scripts?
+#Implementar função em todos os outros scripts?
