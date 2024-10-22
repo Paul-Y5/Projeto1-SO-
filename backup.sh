@@ -4,7 +4,7 @@
 # diretoria de trabalho pode ter ficheiros e diretorias (que por sua vez podem ter
 # subdiretorias). Este script deve considerar todas as opções da linha de comando.
 
-# Print no terminal de todas as execuções de comandos cp -a, rm, etc.
+# Print no terminal de todas as execuções de comandos cp -a -a, rm, etc.
 # Minimo de argumentos: 2 (diretoria de origem) e (diretoria de destino);
 
 # Max args: 2 + [-c] --> ativar a opção de checking (não executa comandos apendas dá print); 
@@ -32,11 +32,6 @@ if [[ $# -lt 2 || $# -gt 5 ]]; then #Condição de intervalo de quantidade de ar
     exit 1 #saída com erro
 fi
 
-if [[ $# -eq 3 && $1 -ne "-c" ]]; then #Condição de uso do -c
-    echo "[Erro] --> Argumento 3 ($1) impossível | Argumentos possíveis: -c"
-    exit 1
-fi
-
 #Utilização de variáveis para argumentos
 Check_mode=0
 tfile=""
@@ -54,11 +49,11 @@ while getopts "cb:r:" opt; do
         r)
             regexpr="$OPTARG" #OPTARG é a expressão que se encontra á frente do -r
             ;;
-        \?) #opções inválidas fora das opções [-c -b -r]
+        \?) #Opções inválidas fora das opções [-c -b -r]
             echo "[Erro] --> Opção inválida: -$OPTARG"
             exit 1
             ;;
-        :) #situações em que uma opção que requer um argumento é fornecida sem um argumento.
+        :) #Situações em que uma opção que requer um argumento é fornecida sem um argumento.
             echo "[Erro] --> A opção -$OPTARG requer um argumento."
             exit 1
             ;;
@@ -68,8 +63,11 @@ while getopts "cb:r:" opt; do
     esac
 done
 
-#Remover as opções processadas da lista de argumentos
+#Remove as opções processadas da lista de argumentos
 shift $((OPTIND - 1))
+#Atribui diretórios aos restantes argumentos
+Source_DIR=$1
+Backup_DIR=$2
 
 #Verifica a existência da diretoria de origem
 if [[ ! -d $Source_DIR ]]; then
@@ -78,70 +76,123 @@ if [[ ! -d $Source_DIR ]]; then
 fi
 
 #Verifica a existência da diretoria de origem
-if [[ ! -d $Backup_DIR ]]; then
+if [[ ! -d $Backup_DIR  && $Check_mode -eq 1 ]]; then
     echo "mkdir $Backup_DIR"
+elif [[ ! -d $Backup_DIR && $Check_mode -eq 0 ]]; then
+    mkdir "$Backup_DIR"
 fi
 
-#Executar em check mode ou não
-if [[ $Check_mode -eq 1 ]]; then #Exucução do progrma de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
-    #Iterar sobre os ficheiros para fazer o backup a partir do cp (comando copy)
-    for file in "$Source_DIR"/{*,.*}; do
-        if [[ -e "$Backup_DIR/${file##*/}" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/${file##*/}" ]]; then
-                echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
-                counter_warnings=$((counter_warnings + 1))
-
-                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/${file##*/}")))
-                echo "rm  "$Backup_DIR/${file##*/}""
-                counter_deleted=$((counter_deleted + 1))
-                
-                echo "cp $file $Backup_DIR"
-                bytes_copied=$((bytes_copied + $(wc -c < $file)))
-                counter_copied=$((counter_copied + 1))
-
-                counter_updated=$((counter_updated + 1))
-            else ### Parei aqui de dar debbug
-                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
-                counter_warnings=$((counter_warnings + 1))
-            fi
-        else
-            echo "cp $file $Backup_DIR"
-            counter_copied=$((counter_copied + 1))
-            bytes_copied=$((bytes_copied + $(wc -c < $file)))
+#Função para argumento -b ()
+ignore_files() {
+    file_ig="$1"
+    basename="${file##*/}"
+    #Verifica se o ficheiro deve ou não ser copiado
+    if [[ -n "$tfile" && -f "$tfile" ]]; then
+        if grep -qx "$basename" "$tfile"; then #Verifica se a linha corresponde exatamente à string
+            return 0 # Ignorar arquivo
         fi
-    done
-    echo "While backuping src: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted deleted ($bytes_deleted B)"
-    exit 0 #saída com sucesso
-else  #Se -c não for argumento executa comandos (modo check=0)
-    if [[ ! -d $Backup_DIR ]]; then
-        mkdir -p "$Backup_DIR"  #-p garante que são criados as diretorias pai caso não existam
     fi
-    for file in "$Source_DIR"/{*,.*}; do
-        if [[ -e "$Backup_DIR/${file##*/}" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/${file##*/}" ]]; then
-                echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
-                counter_warnings=$((counter_warnings + 1))
+    
+    return 1 #copiar
+}
 
-                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/${file##*/}")))
-                rm  "$Backup_DIR/${file##*/}"
-                counter_deleted=$((counter_deleted + 1))
 
-                cp $file $Backup_DIR
-                bytes_copied=$((bytes_copied + $(wc -c < $file)))
-                counter_copied=$((counter_copied + 1))
-
-                counter_updated=$((counter_updated + 1))
-            else
-                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
-                counter_warnings=$((counter_warnings + 1))
+backup_files() {
+    if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
+        #Iterar sobre os ficheiros para fazer o backup a partir do cp -a (comando copy)
+        for file in "$Source_DIR"/{*,.*}; do
+            filename="${file##*/}"
+            if ignore_files "$filename"; then
+                continue # Ignorar ficheiros
             fi
-        else
-            cp "$file" "$Backup_DIR"
-            counter_copied=$((counter_copied + 1))
-            bytes_copied=$((bytes_copied + $(wc -c < $file)))
-            echo "[Ficheiro $file copiado para backup]"
-        fi
-    done
-    echo "While backuping src: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted deleted ($bytes_deleted B)"
-    exit 0
-fi
+
+            if [[ -n $regexpr ]] && ! [[ "$filename" =~ $regexpr ]]; then
+                continue # Ignorar ficheiros que não correspondem ao regex
+            fi
+
+            if [[ -e "$Backup_DIR/$fname" ]]; then ##Problemas com recursividade
+                if [[ -d $file ]]; then
+                    #Chamada recursiva
+                    cd $file
+                    Backup_DIR="$Backup_DIR/$file"
+                    backup_files "-c" $Source_DIR $Backup_DIR 
+                fi
+                if [[ "$file" -nt "$Backup_DIR/$fname" ]]; then
+                    echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
+                    counter_warnings=$((counter_warnings + 1))
+
+                    bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$fname")))
+                    echo "rm  "$Backup_DIR/$fname""
+                    counter_deleted=$((counter_deleted + 1))
+                    
+                    echo "cp -a $file $Backup_DIR"
+                    bytes_copied=$((bytes_copied + $(wc -c < $file)))
+                    counter_copied=$((counter_copied + 1))
+
+                    counter_updated=$((counter_updated + 1))
+                else
+                    echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                    counter_warnings=$((counter_warnings + 1))
+                fi
+            else
+                if [[ -d $file ]]; then
+                    echo "mkdir "$Backup_DIR/$fname""
+                    echo "cd $file"
+                    Backup_DIR="$Backup_DIR/$file"
+                    echo "backup_files "-c" $Source_DIR $Backup_DIR" 
+                else
+                    echo "cp -a $file $Backup_DIR"
+                    counter_copied=$((counter_copied + 1))
+                    bytes_copied=$((bytes_copied + $(wc -c < $file)))
+                fi
+            fi
+        done
+        echo "While backuping src: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted deleted ($bytes_deleted B)"
+        exit 0 #saída com sa partir dos argumentos restantesucesso
+    else  #Se -c não for argumento executa comandos (modo check=0)
+        for file in "$Source_DIR"/{*,.*}; do
+            if ignore_files "$filename"; then
+                continue # Ignorar ficheiros
+            fi
+
+            if [[ -n $regexpr ]] && ! [[ "$filename" =~ $regexpr ]]; then
+                continue # Ignorar ficheiros que não correspondem ao regex
+            fi
+
+            if [[ -e "$Backup_DIR/$fname" ]]; then
+                if [[ -d $file ]]; then
+                    #Chamada recursiva
+                    cd $file
+                    backup_files
+                fi
+
+                if [[ "$file" -nt "$Backup_DIR/$fname" ]]; then
+                    echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
+                    counter_warnings=$((counter_warnings + 1))
+
+                    bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$fname")))
+                    rm  "$Backup_DIR/$fname"
+                    counter_deleted=$((counter_deleted + 1))
+
+                    cp -a $file $Backup_DIR
+                    bytes_copied=$((bytes_copied + $(wc -c < $file)))
+                    counter_copied=$((counter_copied + 1))
+
+                    counter_updated=$((counter_updated + 1))
+                else
+                    echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                    counter_warnings=$((counter_warnings + 1))
+                fi
+            else
+                cp -a "$file" "$Backup_DIR"
+                counter_copied=$((counter_copied + 1))
+                bytes_copied=$((bytes_copied + $(wc -c < $file)))
+                echo "[Ficheiro $file copiado para backup]"
+            fi
+        done
+        echo "While backuping src: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted deleted ($bytes_deleted B)"
+        exit 0
+    fi
+}
+
+backup_files
