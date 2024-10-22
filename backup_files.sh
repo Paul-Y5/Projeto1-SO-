@@ -64,13 +64,15 @@ fi
 if [[ $Check_mode -eq 1 ]]; then #Exucução do progrma de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
     #Iterar sobre os ficheiros para fazer o backup a partir do cp (comando copy)
     for file in "$Source_DIR"/{*,.*}; do
-        if [[ -e "$Backup_DIR/$file" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/$file" ]]; then
+        if [[ -e "$Backup_DIR/${file##*/}" ]]; then
+            if [[ "$file" -nt "$Backup_DIR/${file##*/}" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                 counter_warnings=$((counter_warnings + 1))
-                echo "rm $Backup_DIR/$file"
-                bytes_deleted=$((bytes_deleted + $(wc -c < $Backup_DIR/$file)))
+
+                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/${file##*/}")))
+                echo "rm  "$Backup_DIR/${file##*/}""
                 counter_deleted=$((counter_deleted + 1))
+                
                 echo "cp $file $Backup_DIR"
                 bytes_copied=$((bytes_copied + $(wc -c < $file)))
                 counter_copied=$((counter_copied + 1))
@@ -79,7 +81,6 @@ if [[ $Check_mode -eq 1 ]]; then #Exucução do progrma de acordo com o argument
             else ### Parei aqui de dar debbug
                 echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
                 counter_warnings=$((counter_warnings + 1))
-                bytes_copied=$((bytes_copied + $(wc -c < $file)))
             fi
         else
             echo "cp $file $Backup_DIR"
@@ -94,17 +95,16 @@ else  #Se -c não for argumento executa comandos (modo check=0)
         mkdir -p "$Backup_DIR"  #-p garante que são criados as diretorias pai caso não existam
     fi
     for file in "$Source_DIR"/{*,.*}; do
-        if [[ -e "$Backup_DIR/$file" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/$file" ]]; then
+        if [[ -e "$Backup_DIR/${file##*/}" ]]; then
+            if [[ "$file" -nt "$Backup_DIR/${file##*/}" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                 counter_warnings=$((counter_warnings + 1))
-                rm $Backup_DIR/$file
 
-                bytes_deleted=$((bytes_deleted + $(wc -c < $Backup_DIR/$file)))
+                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/${file##*/}")))
+                rm  "$Backup_DIR/${file##*/}"
                 counter_deleted=$((counter_deleted + 1))
 
                 cp $file $Backup_DIR
-
                 bytes_copied=$((bytes_copied + $(wc -c < $file)))
                 counter_copied=$((counter_copied + 1))
 
@@ -112,7 +112,6 @@ else  #Se -c não for argumento executa comandos (modo check=0)
             else
                 echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
                 counter_warnings=$((counter_warnings + 1))
-                bytes_copied=$((bytes_copied + $(wc -c < $file)))
             fi
         else
             cp "$file" "$Backup_DIR"
