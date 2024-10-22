@@ -65,7 +65,7 @@ if [[ $Check_mode -eq 1 ]]; then #Exucução do progrma de acordo com o argument
     #Iterar sobre os ficheiros para fazer o backup a partir do cp (comando copy)
     for file in "$Source_DIR"/{*,.*}; do
         if [[ -e "$Backup_DIR/$file" ]]; then
-            if [[ $file -nt "$Backup_DIR/$file" ]]; then
+            if [[ "$file" -nt "$Backup_DIR/$file" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                 counter_warnings=$((counter_warnings + 1))
                 echo "rm $Backup_DIR/$file"
@@ -95,7 +95,7 @@ else  #Se -c não for argumento executa comandos (modo check=0)
     fi
     for file in "$Source_DIR"/{*,.*}; do
         if [[ -e "$Backup_DIR/$file" ]]; then
-            if [[ $file -nt "$Backup_DIR/$file" ]]; then
+            if [[ "$file" -nt "$Backup_DIR/$file" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                 counter_warnings=$((counter_warnings + 1))
                 rm $Backup_DIR/$file
@@ -109,7 +109,7 @@ else  #Se -c não for argumento executa comandos (modo check=0)
                 counter_copied=$((counter_copied + 1))
 
                 counter_updated=$((counter_updated + 1))
-            else ### Parei aqui de dar debbug
+            else
                 echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
                 counter_warnings=$((counter_warnings + 1))
                 bytes_copied=$((bytes_copied + $(wc -c < $file)))
