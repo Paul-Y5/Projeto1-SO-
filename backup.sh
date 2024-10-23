@@ -110,19 +110,19 @@ backup_files() {
                 continue # Ignorar ficheiros que não correspondem ao regex
             fi
 
-            if [[ -e "$Backup_DIR/$fname" ]]; then ##Problemas com recursividade
+            if [[ -e "$Backup_DIR/$filename" ]]; then ##Problemas com recursividade
                 if [[ -d $file ]]; then
                     #Chamada recursiva
                     cd $file
                     Backup_DIR="$Backup_DIR/$file"
                     backup_files "-c" $Source_DIR $Backup_DIR 
                 fi
-                if [[ "$file" -nt "$Backup_DIR/$fname" ]]; then
+                if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
                     echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                     counter_warnings=$((counter_warnings + 1))
 
-                    bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$fname")))
-                    echo "rm  "$Backup_DIR/$fname""
+                    bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$filename")))
+                    echo "rm  "$Backup_DIR/$filename""
                     counter_deleted=$((counter_deleted + 1))
                     
                     echo "cp -a $file $Backup_DIR"
@@ -136,7 +136,7 @@ backup_files() {
                 fi
             else
                 if [[ -d $file ]]; then
-                    echo "mkdir "$Backup_DIR/$fname""
+                    echo "mkdir "$Backup_DIR/$filename""
                     echo "cd $file"
                     Backup_DIR="$Backup_DIR/$file"
                     echo "backup_files "-c" $Source_DIR $Backup_DIR" 
@@ -151,6 +151,7 @@ backup_files() {
         exit 0 #saída com sa partir dos argumentos restantesucesso
     else  #Se -c não for argumento executa comandos (modo check=0)
         for file in "$Source_DIR"/{*,.*}; do
+            filename="${file##*/}"
             if ignore_files "$filename"; then
                 continue # Ignorar ficheiros
             fi
@@ -159,19 +160,19 @@ backup_files() {
                 continue # Ignorar ficheiros que não correspondem ao regex
             fi
 
-            if [[ -e "$Backup_DIR/$fname" ]]; then
+            if [[ -e "$Backup_DIR/$filename" ]]; then
                 if [[ -d $file ]]; then
                     #Chamada recursiva
                     cd $file
                     backup_files
                 fi
 
-                if [[ "$file" -nt "$Backup_DIR/$fname" ]]; then
+                if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
                     echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                     counter_warnings=$((counter_warnings + 1))
 
-                    bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$fname")))
-                    rm  "$Backup_DIR/$fname"
+                    bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$filename")))
+                    rm  "$Backup_DIR/$filename"
                     counter_deleted=$((counter_deleted + 1))
 
                     cp -a $file $Backup_DIR

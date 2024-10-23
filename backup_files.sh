@@ -69,13 +69,13 @@ if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumen
             continue
         fi
         filename="${file##*/}"
-        if [[ -e "$Backup_DIR/$fname" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/$fname" ]]; then
+        if [[ -e "$Backup_DIR/$filename" ]]; then
+            if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                 counter_warnings=$((counter_warnings + 1))
 
-                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$fname")))
-                echo "rm  "$Backup_DIR/$fname""
+                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$filename")))
+                echo "rm  "$Backup_DIR/$filename""
                 counter_deleted=$((counter_deleted + 1))
                 
                 echo "cp -a $file $Backup_DIR"
@@ -97,13 +97,14 @@ if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumen
     exit 0 #saída com sucesso
 else  #Se -c não for argumento executa comandos (modo check=0)
     for file in "$Source_DIR"/{*,.*}; do
-        if [[ -e "$Backup_DIR/$fname" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/$fname" ]]; then
+        filename="${file##*/}"
+        if [[ -e "$Backup_DIR/$filename" ]]; then
+            if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                 counter_warnings=$((counter_warnings + 1))
 
-                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$fname")))
-                rm  "$Backup_DIR/$fname"
+                bytes_deleted=$((bytes_deleted + $(wc -c <  "$Backup_DIR/$filename")))
+                rm  "$Backup_DIR/$filename"
                 counter_deleted=$((counter_deleted + 1))
 
                 cp -a $file $Backup_DIR
