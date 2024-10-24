@@ -98,58 +98,84 @@ ignore_files() {
 }
 
 # Iterar sobre os ficheiros e diretórios
-for file in "$Source_DIR"/{*,.*}; do
-    [[ "$file" == "$Source_DIR/." || "$file" == "$Source_DIR/.." ]] && continue
-    filename="${file##*/}"
-
-    if ignore_files "$filename"; then
-        continue
-    fi
-
-    if [[ -n $regexpr ]] && ! [[ "$filename" =~ $regexpr ]]; then
-        continue
-    fi
-
-    if [[ -e "$Backup_DIR/$filename" ]]; then
-        if [[ -d $file ]]; then
-            # Chamada recursiva ao script
-            exec "$0" "$Check_mode" "$tfile" "$regexpr" "$file" "$Backup_DIR/$filename"
+for file in "$source_dir"/{*,.*}; do
+        if ignore_files "$file"; then
+            continue #ignorar ficheiros com o nome encontrado no ficheiro
         fi
 
-        if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
-            echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Substituir]"
-            counter_warnings=$((counter_warnings + 1))
-            bytes_deleted=$((bytes_deleted + $(wc -c < "$Backup_DIR/$filename")))
-            if [[ $Check_mode -eq 0 ]]; then
-                rm "$Backup_DIR/$filename"
+        if [[ -n $regexpr ]] && ! [[ "$file" =~ $regexpr ]]; then
+            continue #ignorar ficheiros que não respeitam a expressão regex
+        fi
+
+        filename="${file##*/}"
+        current_backup_DIR="$backup_dir/$filename"
+
+        if [[ -f $file ]]; then 
+            if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
+                if [[ -e "$current_backup_DIR" ]]; then
+                    if [[ "$file" -nt "$current_backup_DIR" ]]; then
+                        echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Substituir]"
+
+                        echo "rm $current_backup_DIR"
+                        
+                        echo "cp -a $file $Backup_DIR"
+                    else
+                        echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                    fi
+                else
+                    echo "cp -a $file $Backup_DIR"
+                fi
             else
-                echo "rm $Backup_DIR/$filename"
-            fi
-            echo "cp -a $file $Backup_DIR"
-            bytes_copied=$((bytes_copied + $(wc -c < "$file")))
-            counter_copied=$((counter_copied + 1))
-            counter_updated=$((counter_updated + 1))
-        else
-            echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
-            counter_warnings=$((counter_warnings + 1))
-        fi
-    else
-        if [[ -d $file ]]; then
-            if [[ $Check_mode -eq 0 ]]; then
-                mkdir -p "$Backup_DIR/$filename"
-            else
-                echo "mkdir $Backup_DIR/$filename"
-            fi
-        fi
-        if [[ $Check_mode -eq 0 ]]; then
-            cp -a "$file" "$Backup_DIR"
-        else
-            echo "cp -a $file $Backup_DIR"
-        fi
-        counter_copied=$((counter_copied + 1))
-        bytes_copied=$((bytes_copied + $(wc -c < "$file")))
-    fi
-done
+                if [[ -e "$current_backup_DIR" ]]; then
+                    if [[ "$file" -nt "$current_backup_DIR" ]]; then
+                        echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Substituir]"
 
-echo "While backing up: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted deleted ($bytes_deleted B)"
+                        rm "$current_backup_DIR"
+
+                        cp -a "$file" "$Backup_DIR"
+                    else
+                        echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                    fi
+                else
+                    echo "[Ficheiro $file copiado para backup]"
+                    cp -a "$file" "$Backup_DIR"
+                fi
+            fi
+        fi
+    done
+
+    for dir in "$source_dir"/{*.,*}; do
+        if [[ -d $dir ]]; then
+            echo "estive aqui"
+            filename="${dir##*/}"
+            current_backup_DIR="$backup_dir/$filename"
+
+            if [[ $Check_mode -eq 1 ]]; then
+                if [[ -e "$current_backup_DIR" ]]; then
+                    echo "estive aqui 2"
+                    echo "mkdir -p $current_backup_DIR"
+                    mkdir -p "$current_backup_DIR" || { echo "[Erro] Não foi possível criar $current_backup_DIR"; exit 1; }
+                    echo "Sub-Diretoria $filename criada com sucesso!"
+                    echo "backup -c $dir $current_backup_DIR"
+                    backup "$dir" "$current_backup_DIR"
+                else
+                    echo "estive aqui 4"
+                    mkdir -p "$current_backup_DIR"
+                    echo "Sub-Diretoria $filename criada com sucesso!"
+                    backup "$dir" "$current_backup_DIR"
+                fi
+            else
+                if [[ -e "$current_backup_DIR" ]]; then
+                    echo "estive aqui 3"
+                    backup "$dir" "$current_backup_DIR"
+                else
+                    echo "estive aqui 4"
+                    mkdir -p "$current_backup_DIR"
+                    echo "Sub-Diretoria $filename criada com sucesso!"
+                    backup "$dir" "$current_backup_DIR"
+                fi
+            fi
+        fi
+    done
+
 exit 0
