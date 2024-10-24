@@ -78,6 +78,7 @@ fi
 #Verifica a existência da diretoria de origem
 if [[ ! -d $Backup_DIR  && $Check_mode -eq 1 ]]; then
     echo "mkdir $Backup_DIR"
+    mkdir "$Backup_DIR"
 elif [[ ! -d $Backup_DIR && $Check_mode -eq 0 ]]; then
     mkdir "$Backup_DIR"
 fi
