@@ -62,16 +62,17 @@ backup() {
     local source_dir="$1"
     local backup_dir="$2"
 
-    # Variáveis para contadores internos
-    local counter_erro_i=0
-    local counter_warnings_i=0
-    local counter_copied_i=0
-    local counter_deleted_i=0
-    local counter_updated_i=0
-    local bytes_deleted_i=0
-    local bytes_copied_i=0
-
     for file in "$source_dir"/{*,.*}; do
+    
+        # Variáveis para contadores internos
+        counter_erro_i=0
+        counter_warnings_i=0
+        counter_copied_i=0
+        counter_deleted_i=0
+        counter_updated_i=0
+        bytes_deleted_i=0
+        bytes_copied_i=0
+
         if ignore_files "$file"; then
             continue #ignorar ficheiros com o nome encontrado no ficheiro
         fi
@@ -94,7 +95,7 @@ backup() {
                         echo "rm $current_backup_DIR"
                         counter_deleted_i=$((counter_deleted_i + 1))
                         
-                        echo "cp -a $file $Backup_DIR"
+                        echo "cp -a $file $backup_dir"
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                         counter_copied_i=$((counter_copied_i + 1))
 
@@ -104,7 +105,7 @@ backup() {
                         counter_warnings_i=$((counter_warnings_i + 1))
                     fi
                 else
-                    echo "cp -a $file $Backup_DIR"
+                    echo "cp -a $file $backup_dIR"
                     counter_copied_i=$((counter_copied_i + 1))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 fi
@@ -118,7 +119,7 @@ backup() {
                         rm "$current_backup_DIR"
                         counter_deleted_i=$((counter_deleted_i + 1))
 
-                        cp -a "$file" "$Backup_DIR"
+                        cp -a "$file" "$backup_dir"
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                         counter_copied_i=$((counter_copied_i + 1))
 
@@ -129,7 +130,7 @@ backup() {
                     fi
                 else
                     echo "[Ficheiro $file copiado para backup]"
-                    cp -a "$file" "$Backup_DIR"
+                    cp -a "$file" "$backup_dir"
                     counter_copied_i=$((counter_copied_i + 1))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 fi
@@ -144,6 +145,8 @@ backup() {
         counter_deleted=$((counter_deleted + counter_deleted_i))
         bytes_deleted=$((bytes_deleted + bytes_deleted_i))
         bytes_copied=$((bytes_copied + bytes_copied_i))
+        echo $counter_copied
+        echo $counter_copied_i
     done
 
     # Imprime o status após processar arquivos
@@ -158,24 +161,20 @@ backup() {
 
             if [[ $Check_mode -eq 1 ]]; then
                 if [[ -e "$current_backup_DIR" ]]; then
-                    echo "estive aqui 2"
                     echo "mkdir -p $current_backup_DIR"
-                    mkdir -p "$current_backup_DIR" || { echo "[Erro] Não foi possível criar $current_backup_DIR"; exit 1; }
+                    mkdir -p "$current_backup_DIR"
                     echo "Sub-Diretoria $filename criada com sucesso!"
                     echo "backup -c $dir $current_backup_DIR"
                     backup "$dir" "$current_backup_DIR"
                 else
-                    echo "estive aqui 4"
                     mkdir -p "$current_backup_DIR"
                     echo "Sub-Diretoria $filename criada com sucesso!"
                     backup "$dir" "$current_backup_DIR"
                 fi
             else
                 if [[ -e "$current_backup_DIR" ]]; then
-                    echo "estive aqui 3"
                     backup "$dir" "$current_backup_DIR"
                 else
-                    echo "estive aqui 4"
                     mkdir -p "$current_backup_DIR"
                     echo "Sub-Diretoria $filename criada com sucesso!"
                     backup "$dir" "$current_backup_DIR"
