@@ -153,7 +153,6 @@ backup() {
 
     for dir in "$source_dir"/{*.,*}; do
         if [[ -d $dir ]]; then
-            echo "estive aqui"
             filename="${dir##*/}"
             current_backup_DIR="$backup_dir/$filename"
 
