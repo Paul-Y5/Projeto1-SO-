@@ -145,8 +145,6 @@ backup() {
         counter_deleted=$((counter_deleted + counter_deleted_i))
         bytes_deleted=$((bytes_deleted + bytes_deleted_i))
         bytes_copied=$((bytes_copied + bytes_copied_i))
-        echo $counter_copied
-        echo $counter_copied_i
     done
 
     # Imprime o status após processar arquivos
