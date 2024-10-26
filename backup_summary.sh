@@ -1,4 +1,8 @@
 #!/bin/bash
+# para cada diretoria, seja escrito na consola 
+#um sumário com a indicação do número de erros,
+# warnings, ficheiros atualizados, ficheiros copiados e ficheiros apagados
+# Exemplo: While backuping src: 0 Errors; 1 Warnings; 1 Updated; 2 Copied (200B); 0 deleted (0B)
 
 #Variáveis de contagem globais
 counter_erro=0
@@ -19,58 +23,56 @@ ignore_files() {
     #Argumentos necessários
     local file_ig="$1"
     shift
-    local array_ignore="$@"
+    local array_ignore=("$@")
 
     basename="${file_ig##*/}"
 
-    for file in "${array_ignore[@]}"; do
-        if [[ "$basename" == "$file" ]]; then
-            return 0 #Ficheiro ignorado
+    for f in "${array_ignore[@]}"; do
+        if [[ -f "$file_ig" ]]; then
+            if [[ "$basename" == "$f" ]]; then
+                return 0 #Ficheiro ignorado
+            fi
         fi
     done
 
-    return 0 #Ficheiro não ignorado 
+    return 1 #Ficheiro não ignorado 
 }
 
 check_file() {
-    local file="$1"
+    local file_a="$1"
     local regexpr="$2"
 
-    if [[ -n "$regexpr" && ! "$file" =~ $regexpr ]]; then
-        return 1  #Arquivo não respeita regex não será copiado
+    local basename="${file_a##*/}"
+
+    if [[ -n "$regexpr" && ! "$basename" =~ $regexpr ]]; then
+        return 0  #Arquivo não respeita regex não será copiado
     fi
 
-    return 0 #Arquivo vai ser copiado, pois respeita regex
+    return 1 #Arquivo vai ser copiado, pois respeita regex
 }
 
 #----------------------------------------------
 #Condição de argumentos
-if [[ $# -lt 2 || $# -gt 5 ]]; then
+if [[ $# -lt 2 || $# -gt 7 ]]; then
     echo "[Erro] --> Número de argumentos inválido!"
-    exit 1
+    exit 1 #saída com erro
 fi
 
 #Utilização de variáveis para argumentos
 Check_mode=0
-tfile=""
+file_title=""
 regexpr=""
 
 #Opções de argumentos
 while getopts "cb:r:" opt; do
     case $opt in
         c) Check_mode=1 ;;
-        b) tfile="$OPTARG" ;;
+        b) file_title="$OPTARG" ;;
         r) regexpr="$OPTARG" ;;
         \?) echo "[Erro] --> Opção inválida: -$OPTARG"; exit 1 ;;
         :) echo "[Erro] --> A opção -$OPTARG requer um argumento."; exit 1 ;;
     esac
 done
-
-if [[ "$tfile" ]]; then
-    array_ignore=($(create_array "$tfile"))
-else
-    echo "[WARNING] --> Sem ficheiro atribuido!" && (($counter_warnings++))
-fi
 
 shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
 #Facilita na passagem dos argumentos de diretoria de origem e destino
@@ -92,20 +94,28 @@ elif [[ ! -d $Backup_DIR && $Check_mode -eq 0 ]]; then
 fi
 
 #Função principal
+
+# Variáveis para contadores internos
+counter_erro_i=0
+counter_warnings_i=0
+counter_copied_i=0
+counter_deleted_i=0
+counter_updated_i=0
+bytes_deleted_i=0
+bytes_copied_i=0
+
+#Criação de array para nomes de ficheiros
+if [[ "$file_title" ]]; then
+    array_ignore=($(create_array "$file_title"))
+else
+    echo "[WARNING] --> Sem ficheiro atribuido!" && ((counter_warnings_i++))
+fi
+
 backup() {
     local source_dir="$1"
     local backup_dir="$2"
 
     for file in "$source_dir"/{*,.*}; do
-    
-        # Variáveis para contadores internos
-        counter_erro_i=0
-        counter_warnings_i=0
-        counter_copied_i=0
-        counter_deleted_i=0
-        counter_updated_i=0
-        bytes_deleted_i=0
-        bytes_copied_i=0
 
         if ignore_files "$file" "${array_ignore[@]}"; then
             continue #ignorar ficheiros com o nome encontrado no ficheiro
@@ -123,81 +133,89 @@ backup() {
                 if [[ -e "$current_backup_DIR" ]]; then
                     if [[ "$file" -nt "$current_backup_DIR" ]]; then
                         echo "[WARNING] --> Versão do ficheiro encontrada em backup desatualizada [Substituir]"
-                        (($counter_warnings_i++))
+                        ((counter_warnings_i++))
 
                         bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
                         echo "rm $current_backup_DIR"
-                        (($counter_deleted_i++))
+                        ((counter_deleted_i++))
                         
                         echo "cp -a $file $backup_dir"
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file"))) #soma tamanho do ficheiro em bytes
-                        (($counter_copied_i++))
+                        ((counter_copied_i++))
 
-                        (($counter_updated_i++))
+                        ((counter_updated_i++))
                     else
                         echo "[WARNING] --> Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
-                        (($counter_warnings_i++))
+                        ((counter_warnings_i++))
                     fi
                 else
                     echo "cp -a $file $backup_dIR"
-                    (($counter_copied_i++))
+                    ((counter_copied_i++))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 fi
             else
                 if [[ -e "$current_backup_DIR" ]]; then
                     if [[ "$file" -nt "$current_backup_DIR" ]]; then
                         echo "[WARNING] --> Versão do ficheiro encontrada em backup desatualizada [Substituir]"
-                        (($counter_warnings_i++))
+                        ((counter_warnings_i++))
 
                         bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
                         rm "$current_backup_DIR"
-                        (($counter_deleted_i++))
+                        ((counter_deleted_i++))
 
                         cp -a "$file" "$backup_dir"
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
-                        (($counter_copied_i++))
+                        ((counter_copied_i++))
 
-                        (($counter_updated_i++))
+                        ((counter_updated_i++))
                     else
                         echo "[WARNING] --> Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
-                        (($counter_warnings_i++))
+                        ((counter_warnings_i++))
                     fi
                 else
                     echo "[Ficheiro $file copiado para backup]"
                     cp -a "$file" "$backup_dir"
-                    (($counter_copied_i++))
+                    ((counter_copied_i++))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 fi
             fi
         fi
-
-        # Atualiza os contadores globais
-        counter_erro=$((counter_erro + $counter_erro_i))
-        counter_warnings=$((counter_warnings + $counter_warnings_i))
-        counter_updated=$((counter_updated + $counter_updated_i))
-        counter_copied=$((counter_copied + $counter_copied_i))
-        counter_deleted=$((counter_deleted + $counter_deleted_i))
-        bytes_deleted=$((bytes_deleted + $bytes_deleted_i))
-        bytes_copied=$((bytes_copied + $bytes_copied_i))
     done
+
+    # Atualiza os contadores globais
+        counter_erro=$((counter_erro + counter_erro_i))
+        counter_warnings=$((counter_warnings + counter_warnings_i))
+        counter_updated=$((counter_updated + counter_updated_i))
+        counter_copied=$((counter_copied + counter_copied_i))
+        counter_deleted=$((counter_deleted + counter_deleted_i))
+        bytes_deleted=$((bytes_deleted + bytes_deleted_i))
+        bytes_copied=$((bytes_copied + bytes_copied_i))
 
     # Imprime o status após processar arquivos
     echo "While backuping files of $Source_DIR: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ($bytes_copied_i B); $counter_deleted_i Deleted ($bytes_deleted_i B)"
     echo "-------------------------------------------------"
 
     for dir in "$source_dir"/{*.,*}; do
+
+        # Variáveis para contadores internos
+        counter_erro_i=0
+        counter_warnings_i=0
+        counter_copied_i=0
+        counter_deleted_i=0
+        counter_updated_i=0
+        bytes_deleted_i=0
+        bytes_copied_i=0
+
         if [[ -d $dir ]]; then
             filename="${dir##*/}"
             current_backup_DIR="$backup_dir/$filename"
 
             if [[ $Check_mode -eq 1 ]]; then
                 if [[ -e "$current_backup_DIR" ]]; then
-                    echo "mkdir -p $current_backup_DIR"
-                    mkdir -p "$current_backup_DIR"
-                    echo "Sub-Diretoria $filename criada com sucesso!"
                     echo "backup -c $dir $current_backup_DIR"
                     backup "$dir" "$current_backup_DIR"
                 else
+                    echo "mkdir -p $current_backup_DIR"
                     mkdir -p "$current_backup_DIR"
                     echo "Sub-Diretoria $filename criada com sucesso!"
                     backup "$dir" "$current_backup_DIR"

@@ -1,4 +1,23 @@
 #!/bin/bash
+# Semelhante ao backup_files.sh, considerando agora que a
+# diretoria de trabalho pode ter ficheiros e diretorias (que por sua vez podem ter
+# subdiretorias). Este script deve considerar todas as opções da linha de comando.
+
+# Print no terminal de todas as execuções de comandos cp -a -a, rm, etc.
+
+# Minimo de argumentos: 2 (diretoria de origem) e (diretoria de destino);
+
+# Max args: 2 + [-c] --> ativar a opção de checking (não executa comandos apendas dá print); 
+
+# opção -b (permite a indicação de um ficheiro de texto
+# que contém uma lista de ficheiros (ou diretorias) que não devem ser copiados
+# para a diretoria de backup. 
+
+# opção -r indica que apenas devem ser copiados os ficheiros que verificam uma expressão regular
+# Exemplo:
+# ./backup.sh [-c] [-b tfile] [-r regexpr] dir_trabalho dir_backup
+
+# --> Pensar recursivamente <--
 
 #Funções auxiliares:
 source ./create_array.sh
@@ -10,58 +29,56 @@ ignore_files() {
     #Argumentos necessários
     local file_ig="$1"
     shift
-    local array_ignore="$@"
+    local array_ignore=("$@")
 
     basename="${file_ig##*/}"
 
-    for file in "${array_ignore[@]}"; do
-        if [[ "$basename" == "$file" ]]; then
-            return 0 #Ficheiro ignorado
+    for f in "${array_ignore[@]}"; do
+        if [[ -f "$file_ig" ]]; then
+            if [[ "$basename" == "$f" ]]; then
+                return 0 #Ficheiro ignorado
+            fi
         fi
     done
 
-    return 0 #Ficheiro não ignorado 
+    return 1 #Ficheiro não ignorado 
 }
 
 check_file() {
-    local file="$1"
+    local file_a="$1"
     local regexpr="$2"
 
-    if [[ -n "$regexpr" && ! "$file" =~ $regexpr ]]; then
-        return 1  #Arquivo não respeita regex não será copiado
+    local basename="${file_a##*/}"
+
+    if [[ -n "$regexpr" && ! "$basename" =~ $regexpr ]]; then
+        return 0  #Arquivo não respeita regex não será copiado
     fi
 
-    return 0 #Arquivo vai ser copiado, pois respeita regex
+    return 1 #Arquivo vai ser copiado, pois respeita regex
 }
 
 #----------------------------------------------
 #Condição de argumentos
-if [[ $# -lt 2 || $# -gt 5 ]]; then
+if [[ $# -lt 2 || $# -gt 7 ]]; then
     echo "[Erro] --> Número de argumentos inválido!"
-    exit 1
+    exit 1 #saída com erro
 fi
 
 #Utilização de variáveis para argumentos
 Check_mode=0
-tfile=""
+file_title=""
 regexpr=""
 
 #Opções de argumentos
 while getopts "cb:r:" opt; do
     case $opt in
         c) Check_mode=1 ;;
-        b) tfile="$OPTARG" ;;
+        b) file_title="$OPTARG" ;;
         r) regexpr="$OPTARG" ;;
         \?) echo "[Erro] --> Opção inválida: -$OPTARG"; exit 1 ;;
         :) echo "[Erro] --> A opção -$OPTARG requer um argumento."; exit 1 ;;
     esac
 done
-
-if [[ "$tfile" ]]; then
-    array_ignore=($(create_array "$tfile"))
-else
-    echo "[WARNING] --> Sem ficheiro atribuido!" && (($counter_warnings++))
-fi
 
 shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
 #Facilita na passagem dos argumentos de diretoria de origem e destino
@@ -83,8 +100,15 @@ elif [[ ! -d $Backup_DIR && $Check_mode -eq 0 ]]; then
 fi
 
 
-source_dir="$1"
-backup_dir="$2"
+#Criação de array para nomes de ficheiros
+if [[ "$file_title" ]]; then
+    array_ignore=($(create_array "$file_title"))
+else
+    echo "[WARNING] --> Sem ficheiro atribuido!"
+fi
+
+local source_dir="$1"
+local backup_dir="$2"
 
 for file in "$source_dir"/{*,.*}; do
 
@@ -134,29 +158,28 @@ for file in "$source_dir"/{*,.*}; do
 done
 
 for dir in "$source_dir"/{*.,*}; do
+
     if [[ -d $dir ]]; then
         filename="${dir##*/}"
         current_backup_DIR="$backup_dir/$filename"
 
         if [[ $Check_mode -eq 1 ]]; then
             if [[ -e "$current_backup_DIR" ]]; then
+                echo "backup -c $dir $current_backup_DIR"
+                ./backup.sh "$dir" "$current_backup_DIR"
+            else
                 echo "mkdir -p $current_backup_DIR"
                 mkdir -p "$current_backup_DIR"
                 echo "Sub-Diretoria $filename criada com sucesso!"
-                echo "backup -c $dir $current_backup_DIR"
-                backup "$dir" "$current_backup_DIR"
-            else
-                mkdir -p "$current_backup_DIR"
-                echo "Sub-Diretoria $filename criada com sucesso!"
-                backup "$dir" "$current_backup_DIR"
+                ./backup.sh "$dir" "$current_backup_DIR"
             fi
         else
             if [[ -e "$current_backup_DIR" ]]; then
-                backup "$dir" "$current_backup_DIR"
+                ./backup.sh "$dir" "$current_backup_DIR"
             else
                 mkdir -p "$current_backup_DIR"
                 echo "Sub-Diretoria $filename criada com sucesso!"
-                backup "$dir" "$current_backup_DIR"
+                ./backup.sh "$dir" "$current_backup_DIR"
             fi
         fi
     fi
