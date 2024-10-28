@@ -1,8 +1,8 @@
 #!/bin/bash
-# para cada diretoria, seja escrito na consola 
+#para cada diretoria, seja escrito na consola 
 #um sumário com a indicação do número de erros,
-# warnings, ficheiros atualizados, ficheiros copiados e ficheiros apagados
-# Exemplo: While backuping src: 0 Errors; 1 Warnings; 1 Updated; 2 Copied (200B); 0 deleted (0B)
+#warnings, ficheiros atualizados, ficheiros copiados e ficheiros apagados
+#Exemplo: While backuping src: 0 Errors; 1 Warnings; 1 Updated; 2 Copied (200B); 0 deleted (0B)
 
 #Variáveis de contagem globais
 counter_erro=0
@@ -131,6 +131,7 @@ backup() {
         if [[ -f $file ]]; then 
             if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
                 if [[ -e "$current_backup_DIR" ]]; then
+                    #Remover ficheiros que não existem na source
                     if [[ "$file" -nt "$current_backup_DIR" ]]; then
                         echo "[WARNING] --> Versão do ficheiro encontrada em backup desatualizada [Substituir]"
                         ((counter_warnings_i++))
