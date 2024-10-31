@@ -19,7 +19,41 @@
 
 # --> Pensar recursivamente <--
 
+
 #Funções auxiliares:
+remove_files_NE() {
+    #Remover ficheiros ou sub-diretorias da diretoria backup que não existem na diretoria de origem
+
+    local source_dir="$1"
+    local backup_dir="$2"
+
+    for backup_file in "$backup_dir"/{*,.*}; do
+        #Ignorar se for '.' ou '..'
+        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." ]]; then
+            continue
+        fi
+
+        #Nome base do arquivo em backup
+        local basename="${backup_file##*/}"
+        local source_file="$source_dir/$basename"
+
+        #Verificar se o arquivo correspondente não existe na diretoria de origem
+        if [[ ! -e "$source_file" ]]; then
+            echo "A remover $backup_file, pois não existe em $source_dir"
+            
+            bytes_deleted=$(($bytes_deleted + $(wc -c < "$backup_file")))
+            if [[ -d  "$source_file" ]]; then
+                rm -r "$backup_file" || { echo "Erro ao remover $backup_file"; continue;} #Remover recursivamente diretoria
+            else
+                rm "$backup_file" || { echo "Erro ao remover $backup_file"; continue;} #Remover ficheiro
+            fi
+            ((counter_deleted++))
+        fi
+    done
+
+    return 0
+
+}
 source ./create_array.sh
 
 ignore_files() {
@@ -92,11 +126,20 @@ if [[ ! -d $Source_DIR ]]; then
 fi
 
 #Verificar existência da diretoria qure receberá os ficheiros (backup)
-if [[ ! -d $Backup_DIR && $Check_mode -eq 1 ]]; then
-    echo "mkdir $Backup_DIR"
-    mkdir "$Backup_DIR"   
-elif [[ ! -d $Backup_DIR && $Check_mode -eq 0 ]]; then
-    mkdir "$Backup_DIR"
+if [[ -e $Backup_DIR ]]; then
+    if [[ $Check_mode -eq 1 ]]; then
+        echo "remove_files_NE $Source_DIR $Backup_DIR"
+        remove_files_NE $Source_DIR $Backup_DIR
+    elif [[ $Check_mode -eq 0 ]]; then
+        remove_files_NE $Source_DIR $Backup_DIR
+    fi
+else
+    if [[ $Check_mode -eq 1 ]]; then
+        echo "mkdir $Backup_DIR"
+        mkdir "$Backup_DIR"   
+    elif [ $Check_mode -eq 0 ]]; then
+        mkdir -p "$Backup_DIR"
+    fi
 fi
 
 
@@ -111,6 +154,11 @@ local source_dir="$1"
 local backup_dir="$2"
 
 for file in "$source_dir"/{*,.*}; do
+
+    #Ignorar se for '.' ou '..'
+    if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." ]]; then
+        continue
+    fi
 
     if ignore_files "$file" "${array_ignore[@]}"; then
         continue #ignorar ficheiros com o nome encontrado no ficheiro
