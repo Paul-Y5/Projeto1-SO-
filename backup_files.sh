@@ -18,31 +18,75 @@
 
 # Estrutura : /backup.sh [-c] dir_trabalho dir_backup
 
+#Funções Auxiliares
+source ./function_log.sh
+
+#Log file creation
+##Obtém o data + horário atual
+time_LOG=$(date +"%H:%M:%S")
+LOG_date=$(date +"%d_%B_%Y")
+log_file="Backup_files[$LOG_date"-"$time_LOG].log"
+touch $log_file
+echo "|Log realizado para registro de todos os acontecimentos durante o backup da diretoria de trabalho |\n" >> $log_file
+echo "---------------------------------------------------------------------------------------------------\n" >> $log_file
+
+remove_files_NE() {
+    #Remover ficheiros da diretoria backup que não existem na diretoria de origem
+    local source_dir="$1"
+    local backup_dir="$2"
+
+    for backup_file in "$backup_dir"/{*,.*}; do
+        #Ignorar se for '.' ou '..'
+        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." || "$backup_file" == "$backup_dir/.*" || "$backup_file" == "$backup_dir/*" ]]; then
+            continue
+        fi
+
+        #Nome base do ficheiro em backup
+        local basename="${backup_file##*/}"
+        local source_file="$source_dir/$basename"
+
+        #Verificar se o arquivo correspondente não existe na diretoria de origem
+        if [[ ! -e "$source_file" ]]; then
+            echo "A remover $backup_file [não existe em $source_dir]"
+            rm "$backup_file" || { echo "[ERRO] ao remover $backup_file"; } #Remover ficheiro
+            log $log_file "rm "$backup_file""
+        fi
+    done
+
+    return 0
+}
+
+#Verificações iniciais
 if [[ $# -lt 2 || $# -gt 3 ]]; then #Condição de intervalo de quantidade de argumentos [2 a 3]
     echo "[Erro] --> Número de argumentos inválido!"
     exit 1 #saída com erro
 fi
 
-if [[ $# -eq 3 && $1 -ne "-c" ]]; then #Condição de uso do -c
-    echo "[Erro] --> Argumento 3 ($1) impossível | Argumentos possíveis: -c"
-    exit 1
-fi
+#Utilização de variáveis para verificar se foi passado o argumento -c para ativar Check mode
+Check_mode=0
 
-#Utilização de variáveis para as diretorias para verificar se foi passado o argumento -c para ativar Check mode
-if [[ $# -eq 2 ]]; then
-    Check_mode=0
-    Source_DIR=$1
-    Backup_DIR=$2
-else
-    Check_mode=1
-    Source_DIR=$2
-    Backup_DIR=$3
-fi
+#Opções de argumentos
+while getopts "c" opt; do
+    case $opt in
+        c) Check_mode=1 ;;
+        \?) echo "[Erro] --> Opção inválida: -$OPTARG"; exit 1 ;;
+        :) echo "[Erro] --> A opção -$OPTARG requer um argumento."; exit 1 ;;
+    esac
+done
+
+shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
+
+#Variáveis para os argumentos com o path de source e backup
+Source_DIR=$1
+Backup_DIR=$2
 
 #Verifica a existência da diretoria de origem
-if [[ ! -d $Source_DIR ]]; then
+if ! [[ -d $Source_DIR ]]; then
     echo "[Erro] --> A diretoria de origem não existe!"
     exit 1
+else
+    #Verifica à partida se os ficheiros na diretoria backup existem na source se não remove-os
+    remove_files_NE $Source_DIR $Backup_DIR
 fi
 
 #Verifica a existência da diretoria de origem
@@ -64,7 +108,7 @@ if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumen
             if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
 
-                echo "rm  "$Backup_DIR/$filename""
+                echo "rm  $Backup_DIR/$filename"
                 
                 echo "cp -a $file $Backup_DIR"
             else
@@ -81,16 +125,24 @@ else  #Se -c não for argumento executa comandos (modo check=0)
         if [[ -e "$Backup_DIR/$filename" ]]; then
             if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
+                log $log_file "Warning substituído"
 
                 rm  "$Backup_DIR/$filename"
+                log $log_file "rm "$Backup_DIR/$filename""
 
                 cp -a $file $Backup_DIR
+                log $log_file "cp -a $file $Backup_DIR"
+
+                echo "$filename substituído"
             else
-                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não substituído]"
+                log $log_file "Warning não substituído"
             fi
         else
             cp -a "$file" "$Backup_DIR"
-            echo "[Ficheiro $file copiado para backup]"
+            log "$log_file" "cp -a $file $Backup_DIR"
+
+            echo $log_file "[Ficheiro $file copiado para backup]"
         fi
     done
     exit 0

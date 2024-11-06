@@ -19,41 +19,36 @@
 
 # --> Pensar recursivamente <--
 
-
 #Funções auxiliares:
 remove_files_NE() {
     #Remover ficheiros ou sub-diretorias da diretoria backup que não existem na diretoria de origem
-
     local source_dir="$1"
     local backup_dir="$2"
 
     for backup_file in "$backup_dir"/{*,.*}; do
         #Ignorar se for '.' ou '..'
-        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." ]]; then
+        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." || "$backup_file" == "$backup_dir/.*" || "$backup_file" == "$backup_dir/*" ]]; then
             continue
         fi
 
-        #Nome base do arquivo em backup
+        #Nome base do ficheiro/diretoria em backup
         local basename="${backup_file##*/}"
         local source_file="$source_dir/$basename"
 
         #Verificar se o arquivo correspondente não existe na diretoria de origem
         if [[ ! -e "$source_file" ]]; then
-            echo "A remover $backup_file, pois não existe em $source_dir"
-            
-            bytes_deleted=$(($bytes_deleted + $(wc -c < "$backup_file")))
-            if [[ -d  "$source_file" ]]; then
-                rm -r "$backup_file" || { echo "Erro ao remover $backup_file"; continue;} #Remover recursivamente diretoria
+            echo "A remover $backup_file [não existe em $source_dir]"
+            if [[ -d  "$backup_file" ]]; then
+                rm -r "$backup_file" || { echo "[ERRO] ao remover $backup_file"; } #Remover recursivamente diretoria
             else
-                rm "$backup_file" || { echo "Erro ao remover $backup_file"; continue;} #Remover ficheiro
+                rm "$backup_file" || { echo "[ERRO] ao remover $backup_file"; } #Remover ficheiro
             fi
-            ((counter_deleted++))
         fi
     done
 
     return 0
-
 }
+
 source ./create_array.sh
 
 ignore_files() {
@@ -91,7 +86,7 @@ check_file() {
     return 1 #Arquivo vai ser copiado, pois respeita regex
 }
 
-#----------------------------------------------
+#-----------------------------------------------------------------
 #Condição de argumentos
 if [[ $# -lt 2 || $# -gt 7 ]]; then
     echo "[Erro] --> Número de argumentos inválido!"
@@ -115,7 +110,8 @@ while getopts "cb:r:" opt; do
 done
 
 shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
-#Facilita na passagem dos argumentos de diretoria de origem e destino
+
+#Argumentos de diretoria de origem e destino
 Source_DIR=$1
 Backup_DIR=$2
 
@@ -125,38 +121,38 @@ if [[ ! -d $Source_DIR ]]; then
     exit 1
 fi
 
-#Verificar existência da diretoria qure receberá os ficheiros (backup)
-if [[ -e $Backup_DIR ]]; then
+#Verificar existência da diretoria que receberá os ficheiros (backup)
+if ! [[ -e $Backup_DIR ]]; then
     if [[ $Check_mode -eq 1 ]]; then
-        echo "remove_files_NE $Source_DIR $Backup_DIR"
-        remove_files_NE $Source_DIR $Backup_DIR
-    elif [[ $Check_mode -eq 0 ]]; then
-        remove_files_NE $Source_DIR $Backup_DIR
-    fi
-else
-    if [[ $Check_mode -eq 1 ]]; then
-        echo "mkdir $Backup_DIR"
-        mkdir "$Backup_DIR"   
+        echo "mkdir -p $Backup_DIR"
+        mkdir "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; } 
+        backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
     elif [ $Check_mode -eq 0 ]]; then
-        mkdir -p "$Backup_DIR"
+        mkdir -p "$Backup_DIR" | { echo "[Erro] ao criar diretoria bakcup"; exit 1; }  
+        backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
     fi
 fi
-
 
 #Criação de array para nomes de ficheiros
 if [[ "$file_title" ]]; then
     array_ignore=($(create_array "$file_title"))
 else
-    echo "[WARNING] --> Sem ficheiro atribuido!"
+    echo "[WARNING] --> Sem ficheiro atribuido!"erro 
+    ((counter_warnings_i++))
 fi
+
+
+
 
 local source_dir="$1"
 local backup_dir="$2"
 
+remove_files_NE $source_dir $backup_dir $counter_deleted_i $bytes_deleted_i #Remover o que não existe em source
+
 for file in "$source_dir"/{*,.*}; do
 
     #Ignorar se for '.' ou '..'
-    if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." ]]; then
+    if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." || "$backup_file" == "$backup_dir/.*" || "$backup_file" == "$backup_dir/*" ]]; then
         continue
     fi
 
@@ -174,6 +170,7 @@ for file in "$source_dir"/{*,.*}; do
     if [[ -f $file ]]; then 
         if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
             if [[ -e "$current_backup_DIR" ]]; then
+                #Remover ficheiros que não existem na source
                 if [[ "$file" -nt "$current_backup_DIR" ]]; then
                     echo "[WARNING] --> Versão do ficheiro encontrada em backup desatualizada [Substituir]"
 
@@ -191,43 +188,42 @@ for file in "$source_dir"/{*,.*}; do
                 if [[ "$file" -nt "$current_backup_DIR" ]]; then
                     echo "[WARNING] --> Versão do ficheiro encontrada em backup desatualizada [Substituir]"
 
-                    rm "$current_backup_DIR"
+                    rm "$current_backup_DIR" || { echo "[ERRO] ao remover $current_backup_DIR"; ((counter_erro++)); continue;} 
 
-                    cp -a "$file" "$backup_dir"
+                    cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;} 
                 else
                     echo "[WARNING] --> Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
                 fi
             else
                 echo "[Ficheiro $file copiado para backup]"
-                cp -a "$file" "$backup_dir"
+                cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;} 
             fi
         fi
     fi
 done
 
 for dir in "$source_dir"/{*.,*}; do
-
     if [[ -d $dir ]]; then
         filename="${dir##*/}"
         current_backup_DIR="$backup_dir/$filename"
 
         if [[ $Check_mode -eq 1 ]]; then
-            if [[ -e "$current_backup_DIR" ]]; then
+            if [[ -e "$current_backup_DIR" ]]; then  #Verificar existência da sub-diretoria
                 echo "backup -c $dir $current_backup_DIR"
-                ./backup.sh "$dir" "$current_backup_DIR"
+                backup "$dir" "$current_backup_DIR" #Função recursiva à sub-diretoria
             else
                 echo "mkdir -p $current_backup_DIR"
-                mkdir -p "$current_backup_DIR"
+                mkdir -p "$current_backup_DIR" || { echo "[ERRO] ao criar $current_backup_DIR"; ((counter_erro++)); continue;}   #Criar sub-diretoria
                 echo "Sub-Diretoria $filename criada com sucesso!"
-                ./backup.sh "$dir" "$current_backup_DIR"
+                backup "$dir" "$current_backup_DIR"
             fi
         else
             if [[ -e "$current_backup_DIR" ]]; then
-                ./backup.sh "$dir" "$current_backup_DIR"
+                backup "$dir" "$current_backup_DIR"
             else
-                mkdir -p "$current_backup_DIR"
+                mkdir -p "$current_backup_DIR" || { echo "[ERRO] ao criar $current_backup_DIR"; ((counter_erro++)); continue;}
                 echo "Sub-Diretoria $filename criada com sucesso!"
-                ./backup.sh "$dir" "$current_backup_DIR"
+                backup "$dir" "$current_backup_DIR"
             fi
         fi
     fi

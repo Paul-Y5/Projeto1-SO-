@@ -36,13 +36,13 @@ remove_files_NE() {
             continue
         fi
 
-        #Nome base do arquivo em backup
+        #Nome base do ficheiro/diretoria em backup
         local basename="${backup_file##*/}"
         local source_file="$source_dir/$basename"
 
         #Verificar se o arquivo correspondente não existe na diretoria de origem
         if [[ ! -e "$source_file" ]]; then
-            echo "A remover $backup_file, pois não existe em $source_dir"
+            echo "A remover $backup_file [não existe em $source_dir]"
             if [[ -d  "$backup_file" ]]; then
                 local counter_deleted_files=$(find "$backup_file" -type f | wc -l)
                 counter_deleted_i=$(($counter_deleted + $counter_deleted_files))
@@ -120,7 +120,7 @@ while getopts "cb:r:" opt; do
 done
 
 shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
-#Facilita na passagem dos argumentos de diretoria de origem e destino
+#Argumentos de diretoria de origem e destino
 Source_DIR=$1
 Backup_DIR=$2
 
