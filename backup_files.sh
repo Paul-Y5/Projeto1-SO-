@@ -25,7 +25,7 @@ source ./function_log.sh
 ##Obtém o data + horário atual
 time_LOG=$(date +"%H:%M:%S")
 LOG_date=$(date +"%d_%B_%Y")
-log_file="Backup_files[$LOG_date"-"$time_LOG].log"
+log_file="Backup_Files[$LOG_date"-"$time_LOG].log"
 touch $log_file
 echo "|Log realizado para registro de todos os acontecimentos durante o backup da diretoria de trabalho |\n" >> $log_file
 echo "---------------------------------------------------------------------------------------------------\n" >> $log_file

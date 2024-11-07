@@ -23,6 +23,16 @@ bytes_deleted_i=0
 bytes_copied_i=0
 
 #Funções auxiliares:
+
+source ./function_log.sh
+
+#Log file creation
+##Obtém o data + horário atual
+time_LOG=$(date +"%H:%M:%S")
+LOG_date=$(date +"%d_%B_%Y")
+log_file="Backup_Summary[$LOG_date"-"$time_LOG].log"
+touch $log_file
+
 remove_files_NE() {
     #Remover ficheiros ou sub-diretorias da diretoria backup que não existem na diretoria de origem
     local source_dir="$1"
@@ -47,11 +57,13 @@ remove_files_NE() {
                 local counter_deleted_files=$(find "$backup_file" -type f | wc -l)
                 counter_deleted_i=$(($counter_deleted + $counter_deleted_files))
                 bytes_deleted_i=$(($bytes_deleted + $(du -sb "$backup_file" | cut -f1))) #Tamanho total da sub-diretoria | cut -f1 remove o parametro extra que vem com o resultado do size
+                log $log_file "rm -r "$backup_file""
                 rm -r "$backup_file" || { echo "[ERRO] ao remover $backup_file"; ((counter_erro++)); continue;} #Remover recursivamente diretoria
             else
                 bytes_deleted_i=$(($bytes_deleted + $(wc -c < "$backup_file")))
                 ((counter_deleted_i++))
                 rm "$backup_file" || { echo "[ERRO] ao remover $backup_file"; ((counter_erro++)); continue;} #Remover ficheiro
+                log $log_file "rm "$backup_file""
             fi
         fi
     done
@@ -121,8 +133,11 @@ done
 
 shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
 #Argumentos de diretoria de origem e destino
-Source_DIR=$1
-Backup_DIR=$2
+Source_DIR="$1"
+Backup_DIR="$2"
+
+echo "|Log backup da diretoria de $Source_DIR |\n" >> $log_file
+echo "---------------------------------------------------------------------------------------------------\n" >> $log_file
 
 #Verificar a existência da diretoria de origem
 if [[ ! -d $Source_DIR ]]; then
@@ -134,35 +149,29 @@ fi
 if ! [[ -e $Backup_DIR ]]; then
     if [[ $Check_mode -eq 1 ]]; then
         echo "mkdir -p $Backup_DIR"
-        mkdir "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; } 
-        backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
-    elif [ $Check_mode -eq 0 ]]; then
-        mkdir -p "$Backup_DIR" | { echo "[Erro] ao criar diretoria bakcup"; exit 1; }  
-        backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
+        mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
+    elif [[ $Check_mode -eq 0 ]]; then
+        mkdir -p "$Backup_DIR" | { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
+        log $log_file "mkdir -p "$Backup_DIR""
     fi
 fi
 
 #Criação de array para nomes de ficheiros
 if [[ "$file_title" ]]; then
     array_ignore=($(create_array "$file_title"))
-else
-    echo "[WARNING] --> Sem ficheiro atribuido!"erro 
-    ((counter_warnings_i++))
 fi
-
 
 #[Função principal]
 backup() {
-
     local source_dir="$1"
     local backup_dir="$2"
 
-    remove_files_NE $source_dir $backup_dir $counter_deleted_i $bytes_deleted_i #Remover o que não existe em source
+    remove_files_NE $source_dir $backup_dir #Remover o que não existe em source
 
     for file in "$source_dir"/{*,.*}; do
 
         #Ignorar se for '.' ou '..'
-        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." || "$backup_file" == "$backup_dir/.*" || "$backup_file" == "$backup_dir/*" ]]; then
+        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." ]]; then
             continue
         fi
 
@@ -210,21 +219,26 @@ backup() {
                         ((counter_warnings_i++))
 
                         bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
+                        log $log_file "rm "$current_backup_DIR""
                         rm "$current_backup_DIR" || { echo "[ERRO] ao remover $current_backup_DIR"; ((counter_erro++)); continue;} 
                         ((counter_deleted_i++))
 
-                        cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;} 
+                        log $log_file  "cp -a "$file" "$backup_dir""
+                        cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                         ((counter_copied_i++))
 
+                        log $log_file "[Warning --> Substituído]"
                         ((counter_updated_i++))
                     else
-                        echo "[WARNING] --> Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                        log $log_file "[Warning --> Não substituído]"
+                        echo "[WARNING] --> Backup possui versão mais recente do ficheiro $file --> [Não substituído]"
                         ((counter_warnings_i++))
                     fi
                 else
                     echo "[Ficheiro $file copiado para backup]"
-                    cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;} 
+                    log $log_file "cp -a "$file" "$backup_dir"" 
+                    cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
                     ((counter_copied_i++))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 fi
@@ -233,20 +247,19 @@ backup() {
     done
 
     # Atualiza os contadores globais
-        counter_erro=$((counter_erro + counter_erro_i))
-        counter_warnings=$((counter_warnings + counter_warnings_i))
-        counter_updated=$((counter_updated + counter_updated_i))
-        counter_copied=$((counter_copied + counter_copied_i))
-        counter_deleted=$((counter_deleted + counter_deleted_i))
-        bytes_deleted=$((bytes_deleted + bytes_deleted_i))
-        bytes_copied=$((bytes_copied + bytes_copied_i))
+    counter_erro=$((counter_erro + counter_erro_i))
+    counter_warnings=$((counter_warnings + counter_warnings_i))
+    counter_updated=$((counter_updated + counter_updated_i))
+    counter_copied=$((counter_copied + counter_copied_i))
+    counter_deleted=$((counter_deleted + counter_deleted_i))
+    bytes_deleted=$((bytes_deleted + bytes_deleted_i))
+    bytes_copied=$((bytes_copied + bytes_copied_i))
 
     # Imprime o status após processar arquivos
-    echo "While backuping files of $Source_DIR: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ($bytes_copied_i B); $counter_deleted_i Deleted ($bytes_deleted_i B)"
+    echo "While backuping files of $source_dir: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ($bytes_copied_i B); $counter_deleted_i Deleted ($bytes_deleted_i B)"
     echo "-------------------------------------------------"
 
     for dir in "$source_dir"/{*.,*}; do
-
         #Resetar contadores internos ao entrar em sub-diretorias
         counter_erro_i=0
         counter_warnings_i=0
@@ -272,10 +285,13 @@ backup() {
                 fi
             else
                 if [[ -e "$current_backup_DIR" ]]; then
+                    log $log_file "backup "$dir" "$current_backup_DIR""
                     backup "$dir" "$current_backup_DIR"
                 else
                     mkdir -p "$current_backup_DIR" || { echo "[ERRO] ao criar $current_backup_DIR"; ((counter_erro++)); continue;}
                     echo "Sub-Diretoria $filename criada com sucesso!"
+                    log $log_file "mkdir -p "$current_backup_DIR""
+                    log $log_file "backup "$dir" "$current_backup_DIR""
                     backup "$dir" "$current_backup_DIR"
                 fi
             fi
@@ -290,5 +306,10 @@ backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
 # Mensagem final com o resumo
 echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)"
 echo "-------------------------------------------------"
+
+#Para log
+echo "-------------------------------------------------" >> $log_file
+echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)" >> $log_file
+echo "-------------------------------------------------" >> $log_file
 
 exit 0

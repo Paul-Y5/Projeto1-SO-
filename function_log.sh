@@ -1,7 +1,7 @@
 #!/bin/bash
 
+#Função que cria LOG do backup
 log() {
-    #Função que cria LOG do backup
 
     #Comando executado
     local log_file="$1"
