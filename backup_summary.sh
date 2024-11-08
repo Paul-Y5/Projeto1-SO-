@@ -26,7 +26,7 @@ bytes_copied_i=0
 
 source ./function_log.sh
 
-#Log file creation
+#Log file
 ##Obtém o data + horário atual
 time_LOG=$(date +"%H:%M:%S")
 LOG_date=$(date +"%d_%B_%Y")
