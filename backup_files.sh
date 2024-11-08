@@ -113,10 +113,10 @@ for file in "$Source_DIR"/{*,.*}; do
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
                 log $log_file "Warning [substituído]"
 
-                rm  "$Backup_DIR/$filename" || { echo "[ERRO] ao remover $Backup_DIR/$filename"; exit 1; } #Remover ficheiro
+                rm  "$Backup_DIR/$filename" || { echo "[ERRO] ao remover $Backup_DIR/$filename"; continue; } #Remover ficheiro
                 log $log_file "rm "$Backup_DIR/$filename"" #Registo do log
 
-                cp -a $file $Backup_DIR || { echo "[ERRO] ao copiar $file para $Backup_DIR"; exit 1; } #Cópia do ficheiro
+                cp -a $file $Backup_DIR || { echo "[ERRO] ao copiar $file para $Backup_DIR"; continue; } #Cópia do ficheiro
                 log $log_file "cp -a $file $Backup_DIR"
 
                 echo "$filename substituído"
@@ -129,7 +129,7 @@ for file in "$Source_DIR"/{*,.*}; do
         if [[ $Check_mode -eq 1 ]]; then
             echo "cp -a $file $Backup_DIR"
         else
-            cp -a "$file" "$Backup_DIR" || { echo "[ERRO] ao copiar $file para $Backup_DIR"; exit 1; } #Cópia do ficheiro
+            cp -a "$file" "$Backup_DIR" || { echo "[ERRO] ao copiar $file para $Backup_DIR"; continue; } #Cópia do ficheiro
             log "$log_file" "cp -a $file $Backup_DIR"
 
             echo $log_file "[Ficheiro $file copiado para backup]" #Mensagem de sucesso
