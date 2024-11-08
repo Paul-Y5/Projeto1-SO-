@@ -57,15 +57,15 @@ traverse_and_compare() {
     local current_bkup_dir="$2"
 
     for src_path in "$current_src_dir"/*; do
-        relative_src_path="${src_path#$current_src_dir/}"
-        relative_bkup_path="$current_bkup_dir/$relative_src_path"
+        relative_path="${src_path#$current_src_dir/}"
+        relative_bkup_path="$current_bkup_dir/$relative_path"
 
         if [ -d "$src_path" ]; then 
             if [ -d "$relative_bkup_path" ]; then 
                 traverse_and_compare "$src_path" "$relative_bkup_path"
             else
                 ((count_diff++))
-                echo "Erro! O subdiretório $relative_src_path não existe no $current_bkup_dir."
+                echo "Erro! O subdiretório $relative_path não existe no $current_bkup_dir."
             fi
 
         elif [ -f "$src_path" ]; then
@@ -75,7 +75,7 @@ traverse_and_compare() {
                 fi
             else
                 ((count_diff++))
-                echo "Erro! O ficheiro $relative_src_path não existe no $current_bkup_dir."
+                echo "Erro! O ficheiro $relative_path não existe no $current_bkup_dir."
             fi
         fi
     done
