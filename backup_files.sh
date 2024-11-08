@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Considera que a diretoria de trabalho (fonte)
 # apenas tem ficheiros não tendo qualquer sub-diretoria.
 
@@ -68,17 +67,16 @@ Check_mode=0
 #Opções de argumentos
 while getopts "c" opt; do
     case $opt in
-        c) Check_mode=1 ;;
-        \?) echo "[Erro] --> Opção inválida: -$OPTARG"; exit 1 ;;
-        :) echo "[Erro] --> A opção -$OPTARG requer um argumento."; exit 1 ;;
+        c) Check_mode=1 ;; #Ativar Check mode
+        *) echo "[Erro] --> Argumento inválido!"; exit 1 ;; #Argumento inválido
     esac
 done
 
 shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
 
 #Variáveis para os argumentos com o path de source e backup
-Source_DIR=$1
-Backup_DIR=$2
+Source_DIR=$1 #Diretoria de origem
+Backup_DIR=$2 #Diretoria de backup
 
 #Verifica a existência da diretoria de origem
 if ! [[ -d $Source_DIR ]]; then
@@ -89,61 +87,53 @@ else
     remove_files_NE $Source_DIR $Backup_DIR
 fi
 
-#Verifica a existência da diretoria de origem
+#Verifica a existência da diretoria de BACKUP
 if [[ ! -d $Backup_DIR  && $Check_mode -eq 1 ]]; then
     echo "mkdir $Backup_DIR"
 elif [[ ! -d $Backup_DIR && $Check_mode -eq 0 ]]; then
     mkdir "$Backup_DIR"
 fi
 
-#Executar em check mode ou não
-if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
-    #Iterar sobre os ficheiros para fazer o backup a partir do cp -a (comando copy)
-    for file in "$Source_DIR"/{*,.*}; do
-        if [[ -d $file ]]; then
-            continue
-        fi
-        filename="${file##*/}"
-        if [[ -e "$Backup_DIR/$filename" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
+#Parte principal do script
+#Iterar sobre os ficheiros para fazer o backup a partir do cp -a (comando copy)
+for file in "$Source_DIR"/{*,.*}; do
+    if [[ -d $file ]]; then #Ignorar diretórios
+        continue
+    fi
+    filename="${file##*/}"
+    if [[ -e "$Backup_DIR/$filename" ]]; then
+        if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
+            if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
 
-                echo "rm  $Backup_DIR/$filename"
+                echo "rm  $Backup_DIR/$filename" 
                 
                 echo "cp -a $file $Backup_DIR"
             else
-                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
-            fi
-        else
-            echo "cp -a $file $Backup_DIR"
-        fi
-    done
-    exit 0 #saída com sucesso
-else  #Se -c não for argumento executa comandos (modo check=0)
-    for file in "$Source_DIR"/{*,.*}; do
-        filename="${file##*/}"
-        if [[ -e "$Backup_DIR/$filename" ]]; then
-            if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
                 echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
-                log $log_file "Warning substituído"
+                log $log_file "Warning [substituído]"
 
-                rm  "$Backup_DIR/$filename"
-                log $log_file "rm "$Backup_DIR/$filename""
+                rm  "$Backup_DIR/$filename" || { echo "[ERRO] ao remover $Backup_DIR/$filename"; exit 1; } #Remover ficheiro
+                log $log_file "rm "$Backup_DIR/$filename"" #Registo do log
 
-                cp -a $file $Backup_DIR
+                cp -a $file $Backup_DIR || { echo "[ERRO] ao copiar $file para $Backup_DIR"; exit 1; } #Cópia do ficheiro
                 log $log_file "cp -a $file $Backup_DIR"
 
                 echo "$filename substituído"
-            else
-                echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não substituído]"
-                log $log_file "Warning não substituído"
             fi
         else
-            cp -a "$file" "$Backup_DIR"
+            echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]" #Mensagem de aviso
+            log $log_file "Warning não substituído"
+        fi
+    else
+        if [[ $Check_mode -eq 1 ]]; then
+            echo "cp -a $file $Backup_DIR"
+        else
+            cp -a "$file" "$Backup_DIR" || { echo "[ERRO] ao copiar $file para $Backup_DIR"; exit 1; } #Cópia do ficheiro
             log "$log_file" "cp -a $file $Backup_DIR"
 
-            echo $log_file "[Ficheiro $file copiado para backup]"
+            echo $log_file "[Ficheiro $file copiado para backup]" #Mensagem de sucesso
         fi
-    done
-    exit 0
-fi
+    fi
+done
+exit 0 #saída com sucesso
