@@ -150,7 +150,12 @@ fi
 
 #Criação de array para nomes de ficheiros
 if [[ "$file_title" ]]; then
-    array_ignore=($(create_array "$file_title"))
+    if [[ ! -f $file_title ]]; then
+        echo "[Erro] --> Ficheiro não encontrado!"
+        $file_title="" #Reiniciar variável
+    else
+        array_ignore=($(create_array "$file_title")) #Criar array com nomes de ficheiros/diretorias a ignorar
+    fi
 fi
 
 #[Função principal]
@@ -168,17 +173,17 @@ backup() {
         fi
 
         if ignore_files "$file" "${array_ignore[@]}"; then
-            continue #ignorar ficheiros com o nome encontrado no ficheiro
-        fi
-
-        if check_file "$file" "$regexpr"; then
-            continue #ignorar ficheiros que não respeitam a expressão regex
+            continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
         fi
 
         filename="${file##*/}"
         current_backup_DIR="$backup_dir/$filename"
 
         if [[ -f $file ]]; then 
+            if check_file "$file" "$regexpr"; then
+                continue #ignorar ficheiros que não respeitam a expressão regex
+            fi
+            
             if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
                 if [[ -e "$current_backup_DIR" ]]; then
                     #Remover ficheiros que não existem na source
@@ -227,6 +232,10 @@ backup() {
         if [[ -d $dir ]]; then
             filename="${dir##*/}"
             current_backup_DIR="$backup_dir/$filename"
+
+            if ignore_files "$file" "${array_ignore[@]}"; then
+                continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
+            fi
 
             if [[ $Check_mode -eq 1 ]]; then
                 if [[ -e "$current_backup_DIR" ]]; then  #Verificar existência da sub-diretoria
