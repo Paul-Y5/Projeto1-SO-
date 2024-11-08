@@ -84,6 +84,8 @@ traverse_and_compare() {
 
 traverse_and_compare "$1" "$2"
 
+sec_run=1
+
 traverse_and_compare "$2" "$1"
 
 echo "Número de erros total: $count_diff"
