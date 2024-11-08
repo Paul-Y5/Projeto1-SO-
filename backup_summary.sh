@@ -245,18 +245,17 @@ backup() {
                         ((counter_warnings_i++))
                     fi
                 fi
+            else
+                if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
+                    echo "cp -a $file $backup_dIR"
+                    ((counter_copied_i++))
+                    bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 else
-                    if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
-                        echo "cp -a $file $backup_dIR"
-                        ((counter_copied_i++))
-                        bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
-                    else
-                        echo "[Ficheiro $file copiado para backup]"
-                        log $log_file "cp -a "$file" "$backup_dir"" 
-                        cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
-                        ((counter_copied_i++))
-                        bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
-                    fi
+                    echo "[Ficheiro $file copiado para backup]"
+                    log $log_file "cp -a "$file" "$backup_dir"" 
+                    cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
+                    ((counter_copied_i++))
+                    bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 fi
             fi
         fi
@@ -327,9 +326,11 @@ backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
 echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)"
 echo "-------------------------------------------------"
 
-#Para log
-echo "-------------------------------------------------" >> $log_file
-echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)" >> $log_file
-echo "-------------------------------------------------" >> $log_file
+if [[ $Check_mode -eq 0 ]]; then
+    #Para log
+    echo "-------------------------------------------------" >> $log_file
+    echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)" >> $log_file
+    echo "-------------------------------------------------" >> $log_file
+fi
 
 exit 0 #Foi executado sem erros
