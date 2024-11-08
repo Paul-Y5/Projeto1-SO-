@@ -31,7 +31,7 @@ fi
 
 
 
-
+sec_run=0
 
 compare_files() {
     local src_dir="$1"
@@ -64,7 +64,9 @@ traverse_and_compare() {
 
         elif [ -f "$src_path" ]; then
             if [ -f "$relative_bkup_path" ]; then
-                compare_files "$src_path" "$relative_bkup_path"
+                if [ "$sec_run" -eq 0 ]; then 
+                    compare_files "$src_path" "$relative_bkup_path"
+                fi
             else
                 echo "Erro! O ficheiro $relative_path não existe no $current_bkup_dir."
             fi
