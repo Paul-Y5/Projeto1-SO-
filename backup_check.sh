@@ -31,9 +31,7 @@ fi
 
 
 
-count_diff=0
-count_eq=0
-sec_run=0
+
 
 compare_files() {
     local src_dir="$1"
@@ -45,9 +43,6 @@ compare_files() {
 
     if [ "$src_checksum" != "$bkup_checksum" ]; then
         echo "$src_dir $bkup_dir differ"
-        ((count_diff++))
-    else
-        ((count_eq++))
     fi
 }
 
@@ -64,17 +59,13 @@ traverse_and_compare() {
             if [ -d "$relative_bkup_path" ]; then 
                 traverse_and_compare "$src_path" "$relative_bkup_path"
             else
-                ((count_diff++))
                 echo "Erro! O subdiretório $relative_path não existe no $current_bkup_dir."
             fi
 
         elif [ -f "$src_path" ]; then
             if [ -f "$relative_bkup_path" ]; then
-                if [ "$sec_run" -eq 0 ]; then 
-                    compare_files "$src_path" "$relative_bkup_path"
-                fi
+                compare_files "$src_path" "$relative_bkup_path"
             else
-                ((count_diff++))
                 echo "Erro! O ficheiro $relative_path não existe no $current_bkup_dir."
             fi
         fi
