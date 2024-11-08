@@ -20,15 +20,6 @@
 #Funções Auxiliares
 source ./function_log.sh
 
-#Log file
-##Obtém o data + horário atual
-time_LOG=$(date +"%H:%M:%S")
-LOG_date=$(date +"%d_%B_%Y")
-log_file="Backup_Files[$LOG_date"-"$time_LOG].log"
-touch $log_file
-echo "|Log realizado para registro de todos os acontecimentos durante o backup da diretoria de trabalho |\n" >> $log_file
-echo "---------------------------------------------------------------------------------------------------\n" >> $log_file
-
 remove_files_NE() {
     #Remover ficheiros da diretoria backup que não existem na diretoria de origem
     local source_dir="$1"
@@ -77,6 +68,18 @@ shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
 #Variáveis para os argumentos com o path de source e backup
 Source_DIR=$1 #Diretoria de origem
 Backup_DIR=$2 #Diretoria de backup
+
+if [[ $Check_mode -eq 0 ]]; then #Se check mode ativo não irá fazer log
+    #Log file
+    ##Obtém o data + horário atual
+    time_LOG=$(date +"%H:%M:%S")
+    LOG_date=$(date +"%d_%B_%Y")
+    log_file="Backup[$LOG_date"-"$time_LOG].log"
+    touch $log_file
+
+    echo "|Log backup da diretoria $Source_DIR |" >> $log_file
+    echo "---------------------------------------------------------------------------------------------------" >> $log_file
+fi
 
 #Verifica a existência da diretoria de origem
 if ! [[ -d $Source_DIR ]]; then
