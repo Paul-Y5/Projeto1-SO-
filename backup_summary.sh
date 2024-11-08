@@ -156,12 +156,12 @@ if [[ ! -d $Source_DIR ]]; then
 fi
 
 #Verificar existência da diretoria que receberá os ficheiros (backup)
-if ! [[ -e $Backup_DIR ]]; then
+if [[ ! -e $Backup_DIR ]]; then
     if [[ $Check_mode -eq 1 ]]; then
         echo "mkdir -p $Backup_DIR"
         mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
-    elif [[ $Check_mode -eq 0 ]]; then
-        mkdir -p "$Backup_DIR" | { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
+    else
+        mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
         log $log_file "mkdir -p "$Backup_DIR""
     fi
 fi
@@ -288,7 +288,7 @@ backup() {
             filename="${dir##*/}"
             current_backup_DIR="$backup_dir/$filename"
 
-            if ignore_files "$file" "${array_ignore[@]}"; then
+            if ignore_files "$dir" "${array_ignore[@]}"; then
                 continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
             fi
 

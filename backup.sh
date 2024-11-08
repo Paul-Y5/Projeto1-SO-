@@ -147,12 +147,12 @@ if [[ ! -d $Source_DIR ]]; then
 fi
 
 #Verificar existência da diretoria que receberá os ficheiros (backup)
-if ! [[ -e $Backup_DIR ]]; then
+if [[ ! -e "$Backup_DIR" ]]; then
     if [[ $Check_mode -eq 1 ]]; then
         echo "mkdir -p $Backup_DIR"
         mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
-    elif [[ $Check_mode -eq 0 ]]; then
-        mkdir -p "$Backup_DIR" | { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
+    else
+        mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
         log $log_file "mkdir -p "$Backup_DIR""
     fi
 fi
@@ -232,11 +232,9 @@ backup() {
                 fi
             fi
         fi
-    done
 
-    for dir in "$source_dir"/{*.,*}; do
-        if [[ -d $dir ]]; then
-            filename="${dir##*/}"
+        if [[ -d $file ]]; then
+            filename="${file##*/}"
             current_backup_DIR="$backup_dir/$filename" #path sub-diretoria
 
             if ignore_files "$file" "${array_ignore[@]}"; then
@@ -245,24 +243,24 @@ backup() {
         
             if [[ -e "$current_backup_DIR" ]]; then  #Verificar existência da sub-diretoria
                 if [[ $Check_mode -eq 1 ]]; then
-                    echo "backup -c $dir $current_backup_DIR"
-                    backup "$dir" "$current_backup_DIR" #Função recursiva à sub-diretoria
+                    echo "backup -c $file $current_backup_DIR"
+                    backup "$file" "$current_backup_DIR" #Função recursiva à sub-diretoria
                 else
-                    log $log_file "backup "$dir" "$current_backup_DIR""
-                    backup "$dir" "$current_backup_DIR"
+                    log $log_file "backup "$file" "$current_backup_DIR""
+                    backup "$file" "$current_backup_DIR"
                 fi
             else
                 if [[ $Check_mode -eq 1 ]]; then
                     echo "mkdir -p $current_backup_DIR"
                     mkdir -p "$current_backup_DIR" || { echo "[ERRO] ao criar $current_backup_DIR"; ((counter_erro++)); continue;}   #Criar sub-diretoria
                     echo "Sub-Diretoria $filename criada com sucesso!"
-                    backup "$dir" "$current_backup_DIR"
+                    backup "$file" "$current_backup_DIR"
                 else
                     mkdir -p "$current_backup_DIR" || { echo "[ERRO] ao criar $current_backup_DIR"; ((counter_erro++)); continue;}
                     echo "Sub-Diretoria $filename criada com sucesso!"
                     log $log_file "mkdir -p "$current_backup_DIR""
                     log $log_file "backup "$dir" "$current_backup_DIR""
-                    backup "$dir" "$current_backup_DIR"
+                    backup "$file" "$current_backup_DIR"
                 fi
             fi
         fi

@@ -90,11 +90,14 @@ else
     remove_files_NE $Source_DIR $Backup_DIR
 fi
 
-#Verifica a existência da diretoria de BACKUP
-if [[ ! -d $Backup_DIR  && $Check_mode -eq 1 ]]; then
-    echo "mkdir $Backup_DIR"
-elif [[ ! -d $Backup_DIR && $Check_mode -eq 0 ]]; then
-    mkdir "$Backup_DIR"
+if ! [[ -e $Backup_DIR ]]; then
+    if [[ $Check_mode -eq 1 ]]; then
+        echo "mkdir -p $Backup_DIR"
+        mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
+    else
+        mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
+        log $log_file "mkdir -p "$Backup_DIR""
+    fi
 fi
 
 #Parte principal do script
