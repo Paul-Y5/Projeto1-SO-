@@ -14,4 +14,6 @@ https://blog.tratif.com/2023/01/09/bash-tips-1-logging-in-shell-scripts/
 
 https://www.linuxforce.com.br/comandos-linux/comandos-linux-comando-getopts/
 
+https://guialinux.uniriotec.br/
+
 Ideias retiradas de aulas práticas de SO: Arrays; includes; funções; log; iterações(for); boas práticas;
