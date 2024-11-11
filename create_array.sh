@@ -8,7 +8,7 @@ create_array() {
 
     #Lógica para retirar nomes do ficheiro e colocar no array
     while IFS= read -r line; do
-        name_files+=("$line")
+        name_files+=$(realpath "$line")
     done < "$1"
 
     echo "${name_files[@]}"

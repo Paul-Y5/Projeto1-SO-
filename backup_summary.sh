@@ -79,15 +79,13 @@ ignore_files() {
     #ficheiro se encontra no array de nomes de ficheiros a ignorar.
 
     #Argumentos necessários
-    local file_ig="$1"
+    local file_ig=$(realpath "$1")
     shift
     local array_ignore=("$@")
 
-    basename="${file_ig##*/}"
-
     for f in "${array_ignore[@]}"; do
         if [[ -f "$file_ig" ]]; then
-            if [[ "$basename" == "$f" ]]; then
+            if [[ "$file_ig" == "$f" ]]; then
                 return 0 #Ficheiro ignorado
             fi
         fi
