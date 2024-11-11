@@ -31,7 +31,9 @@ fi
 
 
 
-count=0
+count_diff=0
+count_eq=0
+sec_run=0
 
 compare_files() {
     local src_dir="$1"
@@ -43,9 +45,9 @@ compare_files() {
 
     if [ "$src_checksum" != "$bkup_checksum" ]; then
         echo "$src_dir $bkup_dir differ"
-        ((count++))
+        ((count_diff++))
     else
-        echo "ok"
+        ((count_eq++))
     fi
 }
 
@@ -55,23 +57,25 @@ traverse_and_compare() {
     local current_bkup_dir="$2"
 
     for src_path in "$current_src_dir"/*; do
-        relative_src_path="${src_path#$current_src_dir/}"
-        relative_bkup_path="$current_bkup_dir/$relative_src_path"
+        relative_path="${src_path#$current_src_dir/}"
+        relative_bkup_path="$current_bkup_dir/$relative_path"
 
         if [ -d "$src_path" ]; then 
             if [ -d "$relative_bkup_path" ]; then 
                 traverse_and_compare "$src_path" "$relative_bkup_path"
             else
-                ((count++))
-                echo "Erro! Os diretórios têm subdiretórios com nomes diferentes."
+                ((count_diff++))
+                echo "Erro! O subdiretório $relative_path não existe no $current_bkup_dir."
             fi
 
         elif [ -f "$src_path" ]; then
             if [ -f "$relative_bkup_path" ]; then
-                compare_files "$src_path" "$relative_bkup_path"
+                if [ "$sec_run" -eq 0 ]; then 
+                    compare_files "$src_path" "$relative_bkup_path"
+                fi
             else
-                ((count++))
-                echo "Erro! Os diretórios têm ficheiros com nomes diferentes."
+                ((count_diff++))
+                echo "Erro! O ficheiro $relative_path não existe no $current_bkup_dir."
             fi
         fi
     done
@@ -80,4 +84,15 @@ traverse_and_compare() {
 
 traverse_and_compare "$1" "$2"
 
-echo "$count"
+sec_run=1
+
+traverse_and_compare "$2" "$1"
+
+echo "Número de erros total: $count_diff"
+echo "Número de ficheiros iguais: $count_eq"
+
+if [ "$count_diff" -eq 0 ]; then 
+    echo "Os diretórios são iguais"
+else
+    echo "Os diretórios são diferentes"
+fi
