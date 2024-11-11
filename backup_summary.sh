@@ -80,12 +80,13 @@ ignore_files() {
 
     #Argumentos necessários
     local file_ig=$(realpath "$1")
+    dirpath="${file_ig%/*}"
     shift
     local array_ignore=("$@")
-
     for f in "${array_ignore[@]}"; do
-        if [[ -f "$file_ig" ]]; then
-            if [[ "$file_ig" == "$f" ]]; then
+        basename="${f##*/}" 
+        if [[ -e "$file_ig" ]]; then
+            if [[ "$file_ig" == "$dirpath/$basename" ]]; then
                 return 0 #Ficheiro ignorado
             fi
         fi
@@ -100,7 +101,7 @@ check_file() {
 
     local basename="${file_a##*/}"
 
-    if [[ -n "$regexpr" && ! "$basename" =~ $regexpr ]]; then
+    if [[ -n "$regexpr" && ! "$basename" =~ $regexpr ]]; then #-n devolve true se não estiver vazio
         return 0  #Arquivo não respeita regex não será copiado
     fi
 
@@ -189,6 +190,11 @@ backup() {
         fi
 
         if ignore_files "$file" "${array_ignore[@]}"; then
+            echo "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+            ((counter_warnings_i++))
+            if [[ $Check_mode -eq 0 ]]; then
+                log $log_file "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+            fi
             continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
         fi
 
@@ -287,6 +293,11 @@ backup() {
             current_backup_DIR="$backup_dir/$filename"
 
             if ignore_files "$dir" "${array_ignore[@]}"; then
+                echo "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                ((counter_warnings_i++))
+                if [[ $Check_mode -eq 0 ]]; then
+                    log $log_file "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                fi
                 continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
             fi
 

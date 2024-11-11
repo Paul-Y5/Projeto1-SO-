@@ -70,13 +70,14 @@ ignore_files() {
     #ficheiro se encontra no array de nomes de ficheiros a ignorar.
 
     #Argumentos necessários
-    local file_ig= $(realpath "$1")
+    local file_ig=$(realpath "$1")
+    dirpath="${file_ig%/*}"
     shift
     local array_ignore=("$@")
-
     for f in "${array_ignore[@]}"; do
+        basename="${f##*/}" 
         if [[ -e "$file_ig" ]]; then
-            if [[ "$file" == "$f" ]]; then
+            if [[ "$file_ig" == "$dirpath/$basename" ]]; then
                 return 0 #Ficheiro ignorado
             fi
         fi
@@ -180,6 +181,10 @@ backup() {
         fi
 
         if ignore_files "$file" "${array_ignore[@]}"; then
+            echo "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+            if [[ $Check_mode -eq 0 ]]; then
+                log $log_file "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+            fi
             continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
         fi
 
