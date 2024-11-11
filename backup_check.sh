@@ -90,3 +90,9 @@ traverse_and_compare "$2" "$1"
 
 echo "Número de erros total: $count_diff"
 echo "Número de ficheiros iguais: $count_eq"
+
+if [ "$count_diff" -eq 0 ]; then 
+    echo "Os diretórios são iguais"
+else
+    echo "Os diretórios são diferentes"
+fi
