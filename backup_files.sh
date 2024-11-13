@@ -37,9 +37,9 @@ remove_files_NE() {
 
         #Verificar se o arquivo correspondente não existe na diretoria de origem
         if [[ ! -e "$source_file" ]]; then
-            echo "A remover $backup_file [não existe em $source_dir]"
             rm "$backup_file" || { echo "[ERRO] ao remover $backup_file"; } #Remover ficheiro
             log $log_file "rm "$backup_file""
+            echo "$backup_file removido [não existe em $source_dir]"
         fi
     done
 
@@ -96,6 +96,7 @@ if ! [[ -e $Backup_DIR ]]; then
         mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
     else
         mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
+        echo ${log_file%.*} "diretoria $Backup_DIR criada com sucesso!"
         log $log_file "mkdir -p "$Backup_DIR""
     fi
 fi
@@ -106,18 +107,21 @@ for file in "$Source_DIR"/{*,.*}; do
     if [[ -d $file ]]; then #Ignorar diretórios
         continue
     fi
+
     filename="${file##*/}"
-    if [[ -e "$Backup_DIR/$filename" ]]; then
-        if [[ "$file" -nt "$Backup_DIR/$filename" ]]; then
+    current_backup_DIR="$Backup_DIR/$filename"
+
+    if [[ -e "$current_backup_DIR" ]]; then
+        if [[ "$file" -nt "$current_backup_DIR" ]]; then
             if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
-                echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
+                echo "WARNING: Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
 
                 echo "rm  $Backup_DIR/$filename" 
                 
                 echo "cp -a $file $Backup_DIR"
             else
-                echo "WARNING: Versão do ficheiro encontrada em backup desatualizada [Subistituir]"
-                log $log_file "Warning [substituído]"
+                echo "WARNING: Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
+                log $log_file "Warning $current_backup_DIR [substituído]"
 
                 rm  "$Backup_DIR/$filename" || { echo "[ERRO] ao remover $Backup_DIR/$filename"; continue; } #Remover ficheiro
                 log $log_file "rm "$Backup_DIR/$filename"" #Registo do log
@@ -125,11 +129,11 @@ for file in "$Source_DIR"/{*,.*}; do
                 cp -a $file $Backup_DIR || { echo "[ERRO] ao copiar $file para $Backup_DIR"; continue; } #Cópia do ficheiro
                 log $log_file "cp -a $file $Backup_DIR"
 
-                echo "$filename substituído"
+                echo ${log_file} ""$filename" substituído"
             fi
         else
-            echo "WARNING: Backup possui versão mais recente do ficheiro $file --> [Não copiado]" #Mensagem de aviso
-            log $log_file "Warning não substituído"
+            echo "WARNING: "${Backup_DIR##*/}" possui versão mais recente do ficheiro $file --> [Não copiado]" #Mensagem de aviso
+            log $log_file "WARNING: "${Backup_DIR##*/}" possui versão mais recente do ficheiro $file --> [Não copiado]"
         fi
     else
         if [[ $Check_mode -eq 1 ]]; then
@@ -138,7 +142,7 @@ for file in "$Source_DIR"/{*,.*}; do
             cp -a "$file" "$Backup_DIR" || { echo "[ERRO] ao copiar $file para $Backup_DIR"; continue; } #Cópia do ficheiro
             log "$log_file" "cp -a $file $Backup_DIR"
 
-            echo $log_file "[Ficheiro $file copiado para backup]" #Mensagem de sucesso
+            echo ${log_file%.*} "[Ficheiro $file copiado para $Backup_DIR]" #Mensagem a confirmar"
         fi
     fi
 done

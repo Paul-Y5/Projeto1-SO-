@@ -44,7 +44,6 @@ remove_files_NE() {
 
         #Verificar se o arquivo correspondente não existe na diretoria de origem
         if [[ ! -e "$source_file" ]]; then
-            echo "A remover $backup_file [não existe em $source_dir]"
             if [[ -d  "$backup_file" ]]; then
                 if [[ $check -eq 1 ]]; then
                     echo "rm -r "$backup_file""
@@ -55,6 +54,7 @@ remove_files_NE() {
 
                     log $log_file "rm -r "$backup_file""
                     rm -r "$backup_file" || { echo "[ERRO] ao remover $backup_file"; ((counter_erro++)); continue;} #Remover recursivamente diretoria
+                    echo "[Diretoria $file removida  [não existe em $source_dir]]" #Mensagem a confirmar
                 fi
             else
                 if [[ $check -eq 1 ]]; then
@@ -62,8 +62,10 @@ remove_files_NE() {
                 else
                     bytes_deleted_i=$(($bytes_deleted + $(wc -c < "$backup_file")))
                     ((counter_deleted_i++))
+                    
                     rm "$backup_file" || { echo "[ERRO] ao remover $backup_file"; ((counter_erro++)); continue;} #Remover ficheiro
                     log $log_file "rm "$backup_file""
+                    echo "Ficheiro $backup_file removido [não existe em $source_dir]"
                 fi
             fi
         fi
@@ -136,18 +138,6 @@ shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
 Source_DIR="$1"
 Backup_DIR="$2"
 
-if [[ $Check_mode -eq 0 ]]; then #Se check mode ativo não irá fazer log
-    #Log file
-    ##Obtém o data + horário atual
-    time_LOG=$(date +"%H:%M:%S")
-    LOG_date=$(date +"%d_%B_%Y")
-    log_file="Backup[$LOG_date"-"$time_LOG].log"
-    touch $log_file
-
-    echo "|Log backup da diretoria $Source_DIR |" >> $log_file
-    echo "---------------------------------------------------------------------------------------------------" >> $log_file
-fi
-
 #Verificar a existência da diretoria de origem
 if [[ ! -d $Source_DIR ]]; then
     echo "[Erro] --> A diretoria de origem não existe!"
@@ -163,6 +153,18 @@ if [[ ! -e $Backup_DIR ]]; then
         mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
         log $log_file "mkdir -p "$Backup_DIR""
     fi
+fi
+
+if [[ $Check_mode -eq 0 ]]; then #Se check mode ativo não irá fazer log
+    #Log file
+    ##Obtém o data + horário atual
+    time_LOG=$(date +"%H:%M:%S")
+    LOG_date=$(date +"%d_%B_%Y")
+    log_file="Backup[$LOG_date"-"$time_LOG].log"
+    touch $log_file
+
+    echo "|Log backup da diretoria $Source_DIR |" >> $log_file
+    echo "---------------------------------------------------------------------------------------------------" >> $log_file
 fi
 
 #Criação de array para nomes de ficheiros
@@ -204,6 +206,11 @@ backup() {
 
         if [[ -f $file ]]; then 
             if check_file "$file" "$regexpr"; then
+                echo "WARNING: Ficheiro "$file" ignorado, não repseita expressão regex "$regexpr"!"
+                ((counter_warnings_i++))
+                if [[ $Check_mode -eq 0 ]]; then
+                    log $log_file "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                fi
                 continue #ignorar ficheiros que não respeitam a expressão regex
             fi
 
@@ -221,9 +228,10 @@ backup() {
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file"))) #soma tamanho do ficheiro em bytes
                         ((counter_copied_i++))
 
+                        echo ${log_file%.*} ""$filename" substituído"
                         ((counter_updated_i++))
                     else
-                        echo "[WARNING] --> Versão do ficheiro encontrada em backup desatualizada [Substituir]"
+                        echo "[WARNING] --> Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
                         ((counter_warnings_i++))
 
                         bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
@@ -236,7 +244,7 @@ backup() {
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                         ((counter_copied_i++))
 
-                        log $log_file "[Warning --> Substituído]"
+                        log $log_file "[Warning --> $current_backup_DIR Substituído]"
                         ((counter_updated_i++))
                     fi
                 else
