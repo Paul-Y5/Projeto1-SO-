@@ -26,8 +26,8 @@ remove_files_NE() {
     local backup_dir="$2"
 
     for backup_file in "$backup_dir"/{*,.*}; do
-        #Ignorar se for '.' ou '..'
-        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." || "$backup_file" == "$backup_dir/.*" || "$backup_file" == "$backup_dir/*" ]]; then
+        #Ignorar se for '.' ou '..' (diretoria atual e pai respetivamente) 
+        if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." ]]; then
             continue
         fi
 
@@ -38,7 +38,7 @@ remove_files_NE() {
         #Verificar se o arquivo correspondente não existe na diretoria de origem
         if [[ ! -e "$source_file" ]]; then
             rm "$backup_file" || { echo "[ERRO] ao remover $backup_file"; } #Remover ficheiro
-            log $log_file "rm "$backup_file""
+            log $log_file "rm "$backup_file"" #Entrada log
             echo "$backup_file removido [não existe em $source_dir]"
         fi
     done
@@ -52,7 +52,7 @@ if [[ $# -lt 2 || $# -gt 3 ]]; then #Condição de intervalo de quantidade de ar
     exit 1 #saída com erro
 fi
 
-#Utilização de variáveis para verificar se foi passado o argumento -c para ativar Check mode
+#Utilização de variável para verificar se foi passado o argumento -c para ativar Check mode
 Check_mode=0
 
 #Opções de argumentos
@@ -74,9 +74,10 @@ if [[ $Check_mode -eq 0 ]]; then #Se check mode ativo não irá fazer log
     ##Obtém o data + horário atual
     time_LOG=$(date +"%H:%M:%S")
     LOG_date=$(date +"%d_%B_%Y")
+    #criar ficheiro .log
     log_file="Backup[$LOG_date"-"$time_LOG].log"
     touch $log_file
-
+    #Titulo do .log
     echo "|Log backup da diretoria $Source_DIR |" >> $log_file
     echo "---------------------------------------------------------------------------------------------------" >> $log_file
 fi
@@ -84,13 +85,13 @@ fi
 #Verifica a existência da diretoria de origem
 if ! [[ -d $Source_DIR ]]; then
     echo "[Erro] --> A diretoria de origem não existe!"
-    exit 1
+    exit 1 #Saída com erro
 else
-    #Verifica à partida se os ficheiros na diretoria backup existem na source se não remove-os
+    #Verifica à partida se os ficheiros na diretoria backup existem na source, se não, remove-os
     remove_files_NE $Source_DIR $Backup_DIR
 fi
 
-if ! [[ -e $Backup_DIR ]]; then
+if ! [[ -e $Backup_DIR ]]; then #Se diretoria destino não existir criar.
     if [[ $Check_mode -eq 1 ]]; then
         echo "mkdir -p $Backup_DIR"
         mkdir -p "$Backup_DIR" || { echo "[Erro] ao criar diretoria bakcup"; exit 1; }
@@ -104,14 +105,17 @@ fi
 #Parte principal do script
 #Iterar sobre os ficheiros para fazer o backup a partir do cp -a (comando copy)
 for file in "$Source_DIR"/{*,.*}; do
-    if [[ -d $file ]]; then #Ignorar diretórios
+    if [[ -d $file ]]; then #Ignorar diretorias
         continue
     fi
 
+    #Base name + path para backup 
     filename="${file##*/}"
     current_backup_DIR="$Backup_DIR/$filename"
 
+    #Primeiro verificar a existência do file
     if [[ -e "$current_backup_DIR" ]]; then
+    #verificar se o file que se encontra na diretoria origem é mais recente do que o que se encontra no destino
         if [[ "$file" -nt "$current_backup_DIR" ]]; then
             if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
                 echo "WARNING: Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
@@ -135,7 +139,7 @@ for file in "$Source_DIR"/{*,.*}; do
             echo "WARNING: "${Backup_DIR##*/}" possui versão mais recente do ficheiro $file --> [Não copiado]" #Mensagem de aviso
             log $log_file "WARNING: "${Backup_DIR##*/}" possui versão mais recente do ficheiro $file --> [Não copiado]"
         fi
-    else
+    else #Se não exixtir em backup copiar
         if [[ $Check_mode -eq 1 ]]; then
             echo "cp -a $file $Backup_DIR"
         else

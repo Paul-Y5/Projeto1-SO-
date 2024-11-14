@@ -33,7 +33,7 @@ remove_files_NE() {
     local check="$3"
 
     for backup_file in "$backup_dir"/{*,.*}; do
-        #Ignorar se for '.' ou '..'
+        #Ignorar se for '.' ou '..' (diretoria atual e pai respetivamente) 
         if [[ "$backup_file" == "$backup_dir/." || "$backup_file" == "$backup_dir/.." || "$backup_file" == "$backup_dir/.*" || "$backup_file" == "$backup_dir/*" ]]; then
             continue
         fi
@@ -48,8 +48,8 @@ remove_files_NE() {
                 if [[ $check -eq 1 ]]; then
                     echo "rm -r "$backup_file""
                 else
-                    local counter_deleted_files=$(find "$backup_file" -type f | wc -l)
-                    counter_deleted_i=$(($counter_deleted + $counter_deleted_files))
+                    local counter_deleted_files=$(find "$backup_file" -type f | wc -l) #Contagem apartir do wc(linha) de todos os ficheiros dentro de backup sub diretoria 
+                    counter_deleted_i=$(($counter_deleted + $counter_deleted_files)) #Número de ficheirosdeletados
                     bytes_deleted_i=$(($bytes_deleted + $(du -sb "$backup_file" | cut -f1))) #Tamanho total da sub-diretoria | cut -f1 remove o parametro extra que vem com o resultado do size
 
                     log $log_file "rm -r "$backup_file""
@@ -60,7 +60,7 @@ remove_files_NE() {
                 if [[ $check -eq 1 ]]; then
                     echo "rm "$backup_file""
                 else
-                    bytes_deleted_i=$(($bytes_deleted + $(wc -c < "$backup_file")))
+                    bytes_deleted_i=$(($bytes_deleted + $(wc -c < "$backup_file"))) #Contagem dos bytes apagados atrvés de wc -c
                     ((counter_deleted_i++))
                     
                     rm "$backup_file" || { echo "[ERRO] ao remover $backup_file"; ((counter_erro++)); continue;} #Remover ficheiro
@@ -125,15 +125,16 @@ regexpr=""
 #Opções de argumentos
 while getopts "cb:r:" opt; do
     case $opt in
-        c) Check_mode=1 ;;
-        b) file_title="$OPTARG" ;;
-        r) regexpr="$OPTARG" ;;
-        \?) echo "[Erro] --> Opção inválida: -$OPTARG"; exit 1 ;;
-        :) echo "[Erro] --> A opção -$OPTARG requer um argumento."; exit 1 ;;
+        c) Check_mode=1 ;; #Check mode ativo
+        b) file_title="$OPTARG" ;; #Ficheiro de verificação de nomes
+        r) regexpr="$OPTARG" ;; #Expressão regex
+        \?) echo "[Erro] --> Opção inválida: -$OPTARG"; exit 1 ;; #Parâmetros indesejados
+        :) echo "[Erro] --> A opção -$OPTARG requer um argumento."; exit 1 ;; #Obrigar a passagem de um optaeg quando necessário
     esac
 done
 
 shift $((OPTIND - 1)) #Remover argumentos que já foram guardados em variáveis
+
 #Argumentos de diretoria de origem e destino
 Source_DIR="$1"
 Backup_DIR="$2"
@@ -142,6 +143,19 @@ Backup_DIR="$2"
 if [[ ! -d $Source_DIR ]]; then
     echo "[Erro] --> A diretoria de origem não existe!"
     exit 1 #Saída com erro
+fi
+
+if [[ $Check_mode -eq 0 ]]; then #Se check mode ativo não irá fazer log
+    #Log file
+    ##Obtém o data + horário atual
+    time_LOG=$(date +"%H:%M:%S")
+    LOG_date=$(date +"%d_%B_%Y")
+    #criar ficheiro .log
+    log_file="Backup[$LOG_date"-"$time_LOG].log"
+    touch $log_file
+    #Titulo do .log
+    echo "|Log backup da diretoria $Source_DIR |" >> $log_file
+    echo "---------------------------------------------------------------------------------------------------" >> $log_file
 fi
 
 #Verificar existência da diretoria que receberá os ficheiros (backup)
@@ -155,22 +169,10 @@ if [[ ! -e $Backup_DIR ]]; then
     fi
 fi
 
-if [[ $Check_mode -eq 0 ]]; then #Se check mode ativo não irá fazer log
-    #Log file
-    ##Obtém o data + horário atual
-    time_LOG=$(date +"%H:%M:%S")
-    LOG_date=$(date +"%d_%B_%Y")
-    log_file="Backup[$LOG_date"-"$time_LOG].log"
-    touch $log_file
-
-    echo "|Log backup da diretoria $Source_DIR |" >> $log_file
-    echo "---------------------------------------------------------------------------------------------------" >> $log_file
-fi
-
 #Criação de array para nomes de ficheiros
 if [[ "$file_title" ]]; then
     if [[ ! -f $file_title ]]; then
-        echo "[Erro] --> Ficheiro não encontrado!"
+        echo "[Erro] --> Ficheiro não encontrado!" && ((counter_erro++))
         $file_title="" #Reiniciar variável
     else
         array_ignore=($(create_array "$file_title")) #Criar array com nomes de ficheiros/diretorias a ignorar
@@ -179,6 +181,7 @@ fi
 
 #[Função principal]
 backup() {
+    #Argumentos que são passados para possibilitar a recursividade
     local source_dir="$1"
     local backup_dir="$2"
 
@@ -191,11 +194,11 @@ backup() {
             continue
         fi
 
-        if ignore_files "$file" "${array_ignore[@]}"; then
-            echo "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+        if ignore_files "$file" "${array_ignore[@]}"; then #Urilizar a função ignore files
+            echo "[WARNING] --> Ficheiro "$file" ignorado, pois consta no array de nomes para ignorar!"
             ((counter_warnings_i++))
             if [[ $Check_mode -eq 0 ]]; then
-                log $log_file "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                log $log_file "[WARNING] --> Ficheiro "$file" ignorado, pois consta no array de nomes para ignorar!"
             fi
             continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
         fi
@@ -205,19 +208,21 @@ backup() {
         current_backup_DIR="$backup_dir/$filename"
 
         if [[ -f $file ]]; then 
-            if check_file "$file" "$regexpr"; then
-                echo "WARNING: Ficheiro "$file" ignorado, não repseita expressão regex "$regexpr"!"
+            if check_file "$file" "$regexpr"; then #Chamada à função de verificação de padrão regular 
+                echo "[WARNING] --> Ficheiro "$file" ignorado, não repseita expressão regex "$regexpr""
                 ((counter_warnings_i++))
                 if [[ $Check_mode -eq 0 ]]; then
-                    log $log_file "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                    log $log_file "[WARNING] Ficheiro/Diretoria "$file" ignorado, não repseita expressão regex "$regexpr""
                 fi
                 continue #ignorar ficheiros que não respeitam a expressão regex
             fi
 
+            #Primeiro verificar a existência do file
             if [[ -e "$current_backup_DIR" ]]; then #Verificar se existe
+            #verificar se o file que se encontra na diretoria origem é mais recente do que o que se encontra no destino
                 if [[ "$file" -nt "$current_backup_DIR" ]]; then
                     if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
-                        echo "[WARNING] --> Versão do ficheiro encontrada em backup desatualizada [Substituir]"
+                        echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Substituir]"
                         ((counter_warnings_i++))
 
                         bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
@@ -228,10 +233,9 @@ backup() {
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file"))) #soma tamanho do ficheiro em bytes
                         ((counter_copied_i++))
 
-                        echo ${log_file%.*} ""$filename" substituído"
                         ((counter_updated_i++))
                     else
-                        echo "[WARNING] --> Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
+                        echo "[WARNING] --> Versão do ficheiro $file encontrada em $backup_dir desatualizada [Atualizar]"
                         ((counter_warnings_i++))
 
                         bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
@@ -244,16 +248,16 @@ backup() {
                         bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                         ((counter_copied_i++))
 
-                        log $log_file "[Warning --> $current_backup_DIR Substituído]"
+                        log $log_file "${log_file%.*} [$current_backup_DIR Substituído]"
                         ((counter_updated_i++))
                     fi
                 else
                     if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
-                        echo "[WARNING] --> Backup possui versão mais recente do ficheiro $file --> [Não copiado]"
+                        echo "[WARNING] --> $backup_dir possui versão mais recente do ficheiro $file --> [Não copiado]"
                         ((counter_warnings_i++))
                     else
-                        log $log_file "[Warning --> Não substituído]"
-                        echo "[WARNING] --> Backup possui versão mais recente do ficheiro $file --> [Não substituído]"
+                        log $log_file "[$current_backup_DIR Não substituído]"
+                        echo "[WARNING] --> $backup_dir possui versão mais recente do ficheiro $file --> [Não substituído]"
                         ((counter_warnings_i++))
                     fi
                 fi
@@ -263,7 +267,7 @@ backup() {
                     ((counter_copied_i++))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 else
-                    echo "[Ficheiro $file copiado para backup]"
+                    echo "${log_file%.*} [Ficheiro $file copiado para $backup_dir]"
                     log $log_file "cp -a "$file" "$backup_dir"" 
                     cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
                     ((counter_copied_i++))
@@ -286,7 +290,7 @@ backup() {
     echo "While backuping files of $source_dir: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ($bytes_copied_i B); $counter_deleted_i Deleted ($bytes_deleted_i B)"
     echo "-------------------------------------------------"
 
-    for dir in "$source_dir"/{*.,*}; do
+    for dir in "$source_dir"/{*,.*}; do
         #Resetar contadores internos ao entrar em sub-diretorias
         counter_erro_i=0
         counter_warnings_i=0
@@ -297,21 +301,23 @@ backup() {
         bytes_copied_i=0
 
         if [[ -d $dir ]]; then
+            echo $dir
+            #Caminho paraa diretoria atual
             filename="${dir##*/}"
             current_backup_DIR="$backup_dir/$filename"
 
-            if ignore_files "$dir" "${array_ignore[@]}"; then
-                echo "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+            if ignore_files "$dir" "${array_ignore[@]}"; then #Chamada da função ignore para subdiretorias 
+                echo "[WARNING] --> Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
                 ((counter_warnings_i++))
                 if [[ $Check_mode -eq 0 ]]; then
-                    log $log_file "WARNING: Ficheiro/Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                    log $log_file "[WARNING] --> Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
                 fi
                 continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
             fi
 
             if [[ -e "$current_backup_DIR" ]]; then  #Verificar existência da sub-diretoria
+                echo "backup -c $dir $current_backup_DIR"
                 if [[ $Check_mode -eq 1 ]]; then
-                    echo "backup -c $dir $current_backup_DIR"
                     backup "$dir" "$current_backup_DIR" #Função recursiva à sub-diretoria
                 else
                     log $log_file "backup "$dir" "$current_backup_DIR""
@@ -325,7 +331,7 @@ backup() {
                     backup "$dir" "$current_backup_DIR"
                 else
                     mkdir -p "$current_backup_DIR" || { echo "[ERRO] ao criar $current_backup_DIR"; ((counter_erro++)); continue;}
-                    echo "Sub-Diretoria $filename criada com sucesso!"
+                    echo "${log_file%.*} Sub-Diretoria $filename criada com sucesso!"
                     log $log_file "mkdir -p "$current_backup_DIR""
                     log $log_file "backup "$dir" "$current_backup_DIR""
                     backup "$dir" "$current_backup_DIR"
@@ -340,6 +346,7 @@ backup() {
 backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
 
 # Mensagem final com o resumo
+echo "${log_file%.*}:"
 echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)"
 echo "-------------------------------------------------"
 

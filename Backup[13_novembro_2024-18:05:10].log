@@ -1,9 +1,0 @@
-|Log backup da diretoria ../testes |
----------------------------------------------------------------------------------------------------
-[18:05:10] - WARNING: backup99 possui versão mais recente do ficheiro ../testes/f12.sh --> [Não copiado]
-[18:05:10] - Warning ../backup99/f1.txt [substituído]
-[18:05:10] - rm ../backup99/f1.txt
-[18:05:10] - cp -a ../testes/f1.txt ../backup99
-[18:05:10] - WARNING: backup99 possui versão mais recente do ficheiro ../testes/f30.sh --> [Não copiado]
-[18:05:10] - WARNING: backup99 possui versão mais recente do ficheiro ../testes/f60.sh --> [Não copiado]
-[18:05:10] - WARNING: backup99 possui versão mais recente do ficheiro ../testes/.hidden --> [Não copiado]
