@@ -224,31 +224,18 @@ backup() {
                     if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
                         echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Substituir]"
                         ((counter_warnings_i++))
-
-                        bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
-                        echo "rm $current_backup_DIR"
-                        ((counter_deleted_i++))
                         
                         echo "cp -a $file $backup_dir"
-                        bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file"))) #soma tamanho do ficheiro em bytes
-                        ((counter_copied_i++))
 
                         ((counter_updated_i++))
                     else
                         echo "[WARNING] --> Versão do ficheiro $file encontrada em $backup_dir desatualizada [Atualizar]"
                         ((counter_warnings_i++))
 
-                        bytes_deleted_i=$((bytes_deleted_i + $(wc -c < "$current_backup_DIR")))
-                        log $log_file "rm "$current_backup_DIR""
-                        rm "$current_backup_DIR" || { echo "[ERRO] ao remover $current_backup_DIR"; ((counter_erro++)); continue;} 
-                        ((counter_deleted_i++))
-
                         log $log_file  "cp -a "$file" "$backup_dir""
                         cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
-                        bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
-                        ((counter_copied_i++))
 
-                        log $log_file "${log_file%.*} [$current_backup_DIR Substituído]"
+                        log $log_file "${log_file%.*} [$file Substituído]"
                         ((counter_updated_i++))
                     fi
                 else
@@ -285,11 +272,11 @@ backup() {
     counter_deleted=$((counter_deleted + counter_deleted_i))
     bytes_deleted=$((bytes_deleted + bytes_deleted_i))
     bytes_copied=$((bytes_copied + bytes_copied_i))
-
+    
     # Imprime o status após processar arquivos
-    echo "While backuping files of $source_dir: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ($bytes_copied_i B); $counter_deleted_i Deleted ($bytes_deleted_i B)"
+    echo "While Backuping $source_dir: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ("$bytes_copied_i"B); $counter_deleted_i Deleted ("$bytes_deleted_i"B)"
     echo "-------------------------------------------------"
-
+    
     for dir in "$source_dir"/{*,.*}; do
         #Resetar contadores internos ao entrar em sub-diretorias
         counter_erro_i=0
@@ -301,7 +288,6 @@ backup() {
         bytes_copied_i=0
 
         if [[ -d $dir ]]; then
-            echo $dir
             #Caminho paraa diretoria atual
             filename="${dir##*/}"
             current_backup_DIR="$backup_dir/$filename"
@@ -339,7 +325,7 @@ backup() {
             fi
         fi
     done
-
+    
     return 0 #Execução sem erros
 }
 

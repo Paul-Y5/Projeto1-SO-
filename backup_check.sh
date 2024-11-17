@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Chamado quando o script backup.sh ou backup_files.sh possui o argumento -c
-
 # verifica se o conteúdo dos ficheiros na
 # diretoria de backup é igual ao conteúdo dos ficheiros correspondentes na diretoria de
 # trabalho usando o -> comando md5sum <-

@@ -210,21 +210,15 @@ backup() {
                 #verificar se o file que se encontra na diretoria origem é mais recente do que o que se encontra no destino
                 if [[ "$file" -nt "$current_backup_DIR" ]]; then
                     if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
-                        echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Substituir]"
-
-                        echo "rm $current_backup_DIR"
-                        
-                        echo "cp -a $file $backup_dir"
+                        echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Atualizar]"
+                        echo "cp -a "$file" "$current_backup_DIR""
                     else
-                        echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Substituir]"
+                        echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Atualizar]"
 
-                        log $log_file "rm "$current_backup_DIR""
-                        rm "$current_backup_DIR" || { echo "[ERRO] ao remover $current_backup_DIR"; continue;}
+                        log $log_file  "cp -a "$file" "$current_backup_DIR""
+                        cp -a "$file" "$current_backup_DIR" || { echo "[ERRO] ao copiar $file"; continue;}
 
-                        log $log_file  "cp -a "$file" "$backup_dir""
-                        cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; continue;}
-
-                        log $log_file "[$current_backup_dir Substituído]"
+                        log $log_file "[$file Substituído]"
                     fi
                 else
                     if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
@@ -236,11 +230,11 @@ backup() {
                 fi
             else
                 if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
-                    echo "cp -a $file $backup_dIR"
+                    echo "cp -a "$file" "$current_backup_DIR""
                 else
                     echo "${log_file%.*} [Ficheiro $file copiado para $backup_dir]"
-                    log $log_file "cp -a "$file" "$backup_dir"" 
-                    cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; continue;}
+                    log $log_file "cp -a "$file" "$current_backup_DIR"" 
+                    cp -a "$file" "$current_backup_DIR" || { echo "[ERRO] ao copiar $file"; continue;}
                 fi
             fi
         fi
