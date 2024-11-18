@@ -222,16 +222,16 @@ backup() {
             #verificar se o file que se encontra na diretoria origem é mais recente do que o que se encontra no destino
                 if [[ "$file" -nt "$current_backup_DIR" ]]; then
                     if [[ $Check_mode -eq 1 ]]; then  # Modo de verificação
-                        echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Substituir]"
-                        ((counter_warnings_i++))
+                        #echo "[WARNING] --> Versão do ficheiro encontrada em $backup_dir desatualizada [Substituir]"
+                        #((counter_warnings_i++))
                         
                         echo "cp -a $file $backup_dir"
 
                         ((counter_updated_i++))
                     else
-                        echo "[WARNING] --> Versão do ficheiro $file encontrada em $backup_dir desatualizada [Atualizar]"
-                        ((counter_warnings_i++))
-
+                        #echo "[WARNING] --> Versão do ficheiro $file encontrada em $backup_dir desatualizada [Atualizar]"
+                        #((counter_warnings_i++))
+                        echo "cp -a "$file" "$current_backup_DIR""
                         log $log_file  "cp -a "$file" "$backup_dir""
                         cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
 
@@ -244,8 +244,9 @@ backup() {
                         ((counter_warnings_i++))
                     else
                         log $log_file "[$current_backup_DIR Não substituído]"
-                        echo "[WARNING] --> $backup_dir possui versão mais recente do ficheiro $file --> [Não substituído]"
-                        ((counter_warnings_i++))
+                        #echo "[WARNING] --> $backup_dir possui versão mais recente do ficheiro $file --> [Não substituído]"
+                        #((counter_warnings_i++))
+                        continue
                     fi
                 fi
             else
@@ -255,7 +256,7 @@ backup() {
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 else
                     echo "${log_file%.*} [Ficheiro $file copiado para $backup_dir]"
-                    log $log_file "cp -a "$file" "$backup_dir"" 
+                    log $log_file "cp -a "$file" "$current_backup_DIR"" 
                     cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
                     ((counter_copied_i++))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
@@ -293,10 +294,10 @@ backup() {
             current_backup_DIR="$backup_dir/$filename"
 
             if ignore_files "$dir" "${array_ignore[@]}"; then #Chamada da função ignore para subdiretorias 
-                echo "[WARNING] --> Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                echo "[WARNING] --> Diretoria "$file" ignorada, pois consta no array de nomes para ignorar!"
                 ((counter_warnings_i++))
                 if [[ $Check_mode -eq 0 ]]; then
-                    log $log_file "[WARNING] --> Diretoria "$file" ignorado, pois consta no array de nomes para ignorar!"
+                    log $log_file "[WARNING] --> Diretoria "$file" ignorada, pois consta no array de nomes para ignorar!"
                 fi
                 continue #ignorar ficheiros/diretorias com o nome encontrado no ficheiro
             fi
@@ -317,7 +318,7 @@ backup() {
                     backup "$dir" "$current_backup_DIR"
                 else
                     mkdir -p "$current_backup_DIR" || { echo "[ERRO] ao criar $current_backup_DIR"; ((counter_erro++)); continue;}
-                    echo "${log_file%.*} Sub-Diretoria $filename criada com sucesso!"
+                    echo "Sub-Diretoria $filename criada com sucesso!"
                     log $log_file "mkdir -p "$current_backup_DIR""
                     log $log_file "backup "$dir" "$current_backup_DIR""
                     backup "$dir" "$current_backup_DIR"
@@ -332,9 +333,9 @@ backup() {
 backup "$Source_DIR" "$Backup_DIR" #Chamada inicial da função
 
 # Mensagem final com o resumo
-echo "${log_file%.*}:"
-echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)"
-echo "-------------------------------------------------"
+#echo "${log_file%.*}:"
+#echo "Backup Summary: $counter_erro Errors; $counter_warnings Warnings; $counter_updated Updated; $counter_copied Copied ($bytes_copied B); $counter_deleted Deleted ($bytes_deleted B)"
+#echo "-------------------------------------------------"
 
 if [[ $Check_mode -eq 0 ]]; then
     #Para log

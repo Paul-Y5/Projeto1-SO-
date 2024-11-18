@@ -63,7 +63,7 @@ traverse_and_compare() {
                 traverse_and_compare "$src_path" "$relative_bkup_path"
             else
                 ((count_diff++))
-                echo "Erro! O subdiretório $relative_path não existe no $current_bkup_dir."
+                #echo "Erro! O subdiretório $relative_path não existe no $current_bkup_dir."
             fi
 
         elif [ -f "$src_path" ]; then
@@ -73,7 +73,7 @@ traverse_and_compare() {
                 fi
             else
                 ((count_diff++))
-                echo "Erro! O ficheiro $relative_path não existe no $current_bkup_dir."
+                #echo "Erro! O ficheiro $relative_path não existe no $current_bkup_dir."
             fi
         fi
     done
@@ -82,15 +82,15 @@ traverse_and_compare() {
 
 traverse_and_compare "$1" "$2"
 
-sec_run=1
+# sec_run=1
 
-traverse_and_compare "$2" "$1"
+# traverse_and_compare "$2" "$1"
 
-echo "Número de erros total: $count_diff"
-echo "Número de ficheiros iguais: $count_eq"
+# echo "Número de erros total: $count_diff"
+# echo "Número de ficheiros iguais: $count_eq"
 
-if [ "$count_diff" -eq 0 ]; then 
-    echo "Os diretórios são iguais"
-else
-    echo "Os diretórios são diferentes"
-fi
+# if [ "$count_diff" -eq 0 ]; then 
+#     echo "Os diretórios são iguais"
+# else
+#     echo "Os diretórios são diferentes"
+# fi

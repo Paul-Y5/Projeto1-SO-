@@ -118,17 +118,17 @@ for file in "$Source_DIR"/{*,.*}; do
     #verificar se o file que se encontra na diretoria origem é mais recente do que o que se encontra no destino
         if [[ "$file" -nt "$current_backup_DIR" ]]; then
             if [[ $Check_mode -eq 1 ]]; then #Exucução do programa de acordo com o argumento -c (Apenas imprime comandos que seriam executados)
-                echo "WARNING: Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
+                #echo "WARNING: Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
 
                 echo "rm  $Backup_DIR/$filename" 
                 
                 echo "cp -a $file $Backup_DIR"
             else
-                echo "WARNING: Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
+                #echo "WARNING: Versão do ficheiro $file encontrada em backup desatualizada [Atualizar]"
                 log $log_file "Warning $current_backup_DIR [substituído]"
 
-                rm  "$Backup_DIR/$filename" || { echo "[ERRO] ao remover $Backup_DIR/$filename"; continue; } #Remover ficheiro
-                log $log_file "rm "$Backup_DIR/$filename"" #Registo do log
+                #rm  "$Backup_DIR/$filename" || { echo "[ERRO] ao remover $Backup_DIR/$filename"; continue; } #Remover ficheiro
+                #log $log_file "rm "$Backup_DIR/$filename"" #Registo do log
 
                 cp -a $file $Backup_DIR || { echo "[ERRO] ao copiar $file para $Backup_DIR"; continue; } #Cópia do ficheiro
                 log $log_file "cp -a $file $Backup_DIR"
