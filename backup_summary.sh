@@ -255,7 +255,8 @@ backup() {
                     ((counter_copied_i++))
                     bytes_copied_i=$((bytes_copied_i + $(wc -c < "$file")))
                 else
-                    echo "${log_file%.*} [Ficheiro $file copiado para $backup_dir]"
+                    echo "cp -a "$file" "$current_backup_DIR""
+                    #echo "${log_file%.*} [Ficheiro $file copiado para $backup_dir]"
                     log $log_file "cp -a "$file" "$current_backup_DIR"" 
                     cp -a "$file" "$backup_dir" || { echo "[ERRO] ao copiar $file"; ((counter_erro++)); continue;}
                     ((counter_copied_i++))
@@ -275,8 +276,7 @@ backup() {
     bytes_copied=$((bytes_copied + bytes_copied_i))
     
     # Imprime o status após processar arquivos
-    echo "While Backuping $source_dir: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ("$bytes_copied_i"B); $counter_deleted_i Deleted ("$bytes_deleted_i"B)"
-    echo "-------------------------------------------------"
+    echo "While backuping $source_dir: $counter_erro_i Errors; $counter_warnings_i Warnings; $counter_updated_i Updated; $counter_copied_i Copied ("$bytes_copied_i"B); $counter_deleted_i Deleted ("$bytes_deleted_i"B)"
     
     for dir in "$source_dir"/{*,.*}; do
         #Resetar contadores internos ao entrar em sub-diretorias
@@ -303,7 +303,7 @@ backup() {
             fi
 
             if [[ -e "$current_backup_DIR" ]]; then  #Verificar existência da sub-diretoria
-                echo "backup -c $dir $current_backup_DIR"
+                #echo "backup -c $dir $current_backup_DIR"
                 if [[ $Check_mode -eq 1 ]]; then
                     backup "$dir" "$current_backup_DIR" #Função recursiva à sub-diretoria
                 else
