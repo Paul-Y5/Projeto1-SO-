@@ -49,7 +49,7 @@ remove_files_NE() {
                     echo "rm -r "$backup_file""
                 else
                     local counter_deleted_files=$(find "$backup_file" -type f | wc -l) #Contagem apartir do wc(linha) de todos os ficheiros dentro de backup sub diretoria 
-                    counter_deleted_i=$(($counter_deleted + $counter_deleted_files)) #Número de ficheirosdeletados
+                    counter_deleted_i=$(($counter_deleted + $counter_deleted_files)) #Número de ficheiros apagados
                     bytes_deleted_i=$(($bytes_deleted + $(du -sb "$backup_file" | cut -f1))) #Tamanho total da sub-diretoria | cut -f1 remove o parametro extra que vem com o resultado do size
 
                     log $log_file "rm -r "$backup_file""
